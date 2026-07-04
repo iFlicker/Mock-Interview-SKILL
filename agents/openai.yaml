@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mock-Interview"
+  short_description: "基于真实简历开展沉浸式、主题驱动且可深入追问的模拟面试与评价"
+  default_prompt: "使用 $mock-interview，根据我的简历开展一场沉浸式、主题驱动的真实模拟面试。"
