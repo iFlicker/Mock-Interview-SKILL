@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<!--
+  Mock-Interview 面试报告模板
+  =============================
+  本模板由 scripts/generate_report.py 使用。
+  不要手工替换占位符或手工复制重复区块。
+  生成脚本负责读取 JSON、展开重复块、删除可选区块并转义用户输入。
+
+  颜色等级映射（用于总分圆圈和分维度进度条）：
+  ┌────────────┬──────────────────────┬──────────────────────┐
+  │  分数范围  │  圆圈 class (bg-)    │  进度条 class (fill-)│
+  ├────────────┼──────────────────────┼──────────────────────┤
+  │  90 ～ 100 │  bg-excellent        │  fill-excellent      │
+  │  75 ～  89 │  bg-good             │  fill-good           │
+  │  60 ～  74 │  bg-adequate         │  fill-adequate       │
+  │  40 ～  59 │  bg-needs-improve    │  fill-needs-improve  │
+  │   0 ～  39 │  bg-fail             │  fill-fail           │
+  │  证据不足  │  bg-na               │  fill-na             │
+  └────────────┴──────────────────────┴──────────────────────┘
+
+  推荐结论映射（用于 header 徽章和推荐区块）：
+  ┌──────────────┬─────────────────┬──────────────┐
+  │  推荐结论    │  徽章 class      │  区块 class   │
+  ├──────────────┼─────────────────┼──────────────┤
+  │  强烈建议    │  badge-strong    │  rec-strong   │
+  │  建议        │  badge-yes       │  rec-yes      │
+  │  待定        │  badge-pending   │  rec-pending  │
+  │  不建议      │  badge-no        │  rec-no       │
+  └──────────────┴─────────────────┴──────────────┘
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模拟面试报告 — {{TARGET_POSITION}} {{INTERVIEW_ROUND}}</title>
+<style>
+/* ── 基础变量 ─────────────────────────────── */
+:root {
+  --c-primary: #4f46e5;
+  --c-primary-light: #818cf8;
+  --c-bg: #f8fafc;
+  --c-card: #fff;
+  --c-border: #e2e8f0;
+  --c-text: #1e293b;
+  --c-text-2: #64748b;
+  --c-excellent: #059669;
+  --c-good: #2563eb;
+  --c-adequate: #d97706;
+  --c-needs-improve: #ea580c;
+  --c-fail: #dc2626;
+  --c-na: #94a3b8;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
+  --r: 12px;
+  --r-sm: 8px;
+  --sidebar-w: 210px;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', 'PingFang SC', sans-serif;
+  background: var(--c-bg); color: var(--c-text); line-height: 1.75; font-size: 15px;
+}
+
+/* ── 侧边栏导航 ──────────────────────────── */
+.sidebar {
+  position: fixed; top: 0; left: 0;
+  width: var(--sidebar-w); height: 100vh;
+  background: #1e293b; z-index: 100;
+  overflow-y: auto; display: flex; flex-direction: column;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+.sidebar-hd { padding: 22px 20px 18px; border-bottom: 1px solid #334155; }
+.sidebar-hd .icon { font-size: 22px; margin-bottom: 4px; }
+.sidebar-hd .title { color: #f1f5f9; font-size: 15px; font-weight: 700; }
+.sidebar-grp { padding: 14px 0; }
+.sidebar-grp + .sidebar-grp { border-top: 1px solid #334155; }
+.sidebar-cat {
+  color: #94a3b8; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .8px;
+  padding: 0 20px 6px;
+}
+.sidebar a {
+  display: block; padding: 7px 20px 7px 24px;
+  color: #cbd5e1; text-decoration: none; font-size: 13px;
+  border-left: 3px solid transparent;
+  transition: all .15s ease;
+}
+.sidebar a:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sidebar a.active {
+  border-left-color: var(--c-primary-light); color: #fff;
+  background: rgba(129,140,248,.12); font-weight: 600;
+}
+
+/* ── 主内容区 ─────────────────────────────── */
+.content { margin-left: var(--sidebar-w); }
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Header ───────────────────────────────── */
+.hdr { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 48px 0 40px; }
+.hdr h1 { font-size: 30px; font-weight: 800; }
+.hdr .sub { font-size: 18px; opacity: .9; margin: 4px 0 14px; }
+.hdr .meta { display: flex; flex-wrap: wrap; gap: 20px; font-size: 14px; opacity: .85; }
+.badge { display: inline-block; padding: 5px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 14px; }
+.badge-strong { background: rgba(5,150,105,.25); border: 1px solid rgba(5,150,105,.5); }
+.badge-yes    { background: rgba(37,99,235,.25);  border: 1px solid rgba(37,99,235,.5); }
+.badge-pending{ background: rgba(217,119,6,.25);   border: 1px solid rgba(217,119,6,.5); }
+.badge-no     { background: rgba(220,38,38,.25);   border: 1px solid rgba(220,38,38,.5); }
+
+/* ── Sections ─────────────────────────────── */
+.sec { margin: 32px 0; scroll-margin-top: 20px; }
+.sec-t { font-size: 19px; font-weight: 700; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 3px solid var(--c-primary); display: inline-block; }
+
+/* ── Cards & Grid ─────────────────────────── */
+.card { background: var(--c-card); border-radius: var(--r); box-shadow: var(--shadow); padding: 24px; border: 1px solid var(--c-border); }
+.card + .card { margin-top: 14px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+.g2 > .card { margin-top: 0; height: auto; display: flex; flex-direction: column; }
+
+/* ── Info rows ────────────────────────────── */
+.row { display: flex; padding: 9px 0; border-bottom: 1px solid #f1f5f9; }
+.row:last-child { border-bottom: none; }
+.row-k { width: 130px; flex-shrink: 0; color: var(--c-text-2); font-size: 14px; }
+.row-v { font-weight: 500; }
+
+/* ── Material summary ─────────────────────── */
+.mat h4 { font-size: 15px; font-weight: 600; color: var(--c-primary); margin: 16px 0 6px; }
+.mat h4:first-child { margin-top: 0; }
+
+/* ── Topic cards ──────────────────────────── */
+.topic { background: var(--c-card); border-radius: var(--r); box-shadow: 0 1px 3px rgba(0,0,0,.06); border: 1px solid var(--c-border); margin-bottom: 16px; overflow: hidden; }
+.topic-hd { background: #f8fafc; padding: 14px 24px; border-bottom: 1px solid var(--c-border); display: flex; align-items: center; gap: 12px; }
+.topic-tag { background: var(--c-primary); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 11px; border-radius: 12px; white-space: nowrap; }
+.topic-hd h3 { font-size: 16px; font-weight: 600; }
+.topic-bd { padding: 20px 24px; }
+
+.qa { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--c-border); }
+.qa:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.qa-who { font-size: 12px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; margin-bottom: 2px; }
+.qa-who.i { color: var(--c-primary); }
+.qa-who.c { color: var(--c-excellent); }
+.qa-txt { margin-bottom: 10px; }
+
+.obs { background: #fefce8; border-left: 3px solid #eab308; padding: 10px 16px; border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 14px; margin-top: 14px; }
+.obs strong { color: #a16207; }
+
+/* ── Score overview ───────────────────────── */
+.sc-box { display: flex; align-items: center; gap: 32px; padding: 32px; flex-wrap: wrap; }
+.sc-circle { width: 116px; height: 116px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; }
+.sc-num { font-size: 40px; font-weight: 800; line-height: 1; }
+.sc-lbl { font-size: 14px; font-weight: 500; margin-top: 3px; }
+.bg-excellent    { background: linear-gradient(135deg, #059669, #10b981); }
+.bg-good         { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+.bg-adequate     { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.bg-needs-improve{ background: linear-gradient(135deg, #ea580c, #f97316); }
+.bg-fail         { background: linear-gradient(135deg, #dc2626, #ef4444); }
+.bg-na           { background: linear-gradient(135deg, #64748b, #94a3b8); }
+.sc-info h3 { font-size: 18px; margin-bottom: 6px; }
+.sc-info p  { color: var(--c-text-2); font-size: 14px; line-height: 1.6; }
+
+/* ── Dimension table ──────────────────────── */
+.dt { width: 100%; border-collapse: collapse; }
+.dt th { text-align: left; padding: 11px 16px; background: #f8fafc; font-size: 13px; font-weight: 600; color: var(--c-text-2); letter-spacing: .3px; border-bottom: 2px solid var(--c-border); }
+.dt td { padding: 13px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.dt tr:last-child td { border-bottom: none; }
+.dt .d-name { font-weight: 600; }
+.dt .d-w { color: var(--c-text-2); font-size: 14px; }
+.dt .d-s { font-weight: 700; font-size: 16px; min-width: 55px; }
+.bar { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+.bar-in { height: 100%; border-radius: 3px; }
+.fill-excellent    { background: var(--c-excellent); }
+.fill-good         { background: var(--c-good); }
+.fill-adequate     { background: var(--c-adequate); }
+.fill-needs-improve{ background: var(--c-needs-improve); }
+.fill-fail         { background: var(--c-fail); }
+.fill-na           { background: var(--c-na); }
+
+/* ── Eval lists ───────────────────────────── */
+.ev li { padding: 9px 0; border-bottom: 1px solid #f1f5f9; display: flex; gap: 10px; list-style: none; }
+.ev li:last-child { border-bottom: none; }
+.dot { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; margin-top: 2px; }
+.dot-s { background: #dcfce7; color: #059669; }
+.dot-r { background: #fee2e2; color: #dc2626; }
+.dot-q { background: #fef3c7; color: #d97706; }
+
+/* ── Numbered items ───────────────────────── */
+.ni { counter-reset: ni; list-style: none; }
+.ni li { counter-increment: ni; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
+.ni li:last-child { border-bottom: none; }
+.ni li::before { content: counter(ni); display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: var(--c-primary); color: #fff; border-radius: 50%; font-size: 13px; font-weight: 700; margin-right: 12px; vertical-align: middle; }
+
+/* ── Better answer ────────────────────────── */
+.ba { background: #f0fdf4; border-left: 3px solid var(--c-excellent); padding: 14px 20px; border-radius: 0 var(--r-sm) var(--r-sm) 0; margin-bottom: 14px; }
+.ba:last-child { margin-bottom: 0; }
+.ba h4 { font-size: 14px; color: var(--c-excellent); margin-bottom: 6px; font-weight: 600; }
+
+/* ── Recommendation ───────────────────────── */
+.rec-center { text-align: center; padding: 28px; }
+.rec-tag { display: inline-block; padding: 10px 32px; border-radius: var(--r); font-size: 20px; font-weight: 700; margin-bottom: 14px; }
+.rec-strong { background: #dcfce7; color: #059669; border: 2px solid #059669; }
+.rec-yes     { background: #dbeafe; color: #2563eb; border: 2px solid #2563eb; }
+.rec-pending { background: #fef3c7; color: #d97706; border: 2px solid #d97706; }
+.rec-no      { background: #fee2e2; color: #dc2626; border: 2px solid #dc2626; }
+.rec-reason  { color: var(--c-text-2); font-size: 14px; max-width: 600px; margin: 0 auto; }
+
+/* ── Footer ───────────────────────────────── */
+.ftr { text-align: center; padding: 22px 0; color: var(--c-text-2); font-size: 13px; border-top: 1px solid var(--c-border); margin-top: 40px; }
+
+/* ── Print ────────────────────────────────── */
+@media print {
+  .sidebar { display: none !important; }
+  .content { margin-left: 0 !important; }
+  body { background: #fff; font-size: 13px; }
+  .hdr, .sc-circle, .bar-in, .topic-tag, .dot, .ni li::before, .rec-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card, .topic { box-shadow: none; }
+  .topic { break-inside: avoid; }
+}
+
+/* ── Mobile ───────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { margin-left: 0; }
+  .g2 { grid-template-columns: 1fr; }
+  .sc-box { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     侧边栏导航
+     ============================================================ -->
+<nav class="sidebar">
+  <div class="sidebar-hd">
+    <div class="icon">📋</div>
+    <div class="title">面试报告</div>
+  </div>
+  <div class="sidebar-grp">
+    <div class="sidebar-cat">面试记录</div>
+    <a href="#sec-info">基本信息与配置</a>
+    <a href="#sec-materials">相关材料摘要</a>
+    <a href="#sec-process">面试过程</a>
+  </div>
+  <div class="sidebar-grp">
+    <div class="sidebar-cat">评价结果</div>
+    <a href="#sec-overview">评价总览</a>
+    <a href="#sec-dimensions">分维度评分</a>
+    <a href="#sec-strengths">明确优势</a>
+    <a href="#sec-risks">风险与不足</a>
+    <a href="#sec-gaps">矛盾与缺口</a>
+  </div>
+  <div class="sidebar-grp">
+    <div class="sidebar-cat">改进建议</div>
+    <a href="#sec-improvements">优先改进项</a>
+    <a href="#sec-answers">更优回答思路</a>
+    <a href="#sec-next">下一轮展望</a>
+  </div>
+</nav>
+
+<!-- ============================================================
+     主内容区
+     ============================================================ -->
+<div class="content">
+
+<!-- ── Header ─────────────────────────────── -->
+<header class="hdr">
+  <div class="wrap">
+    <h1>模拟面试报告</h1>
+    <p class="sub">{{TARGET_POSITION}} · {{INTERVIEW_ROUND}}</p>
+    <div class="meta">
+      <span>📅 {{INTERVIEW_DATE}}</span>
+      <span>👤 {{CANDIDATE_TYPE}}</span>
+      <span>🌐 {{INTERVIEW_LANGUAGE}}</span>
+    </div>
+    <!-- 根据推荐结论选择对应的 badge class -->
+    <span class="badge {{RECOMMENDATION_BADGE_CLASS}}">{{RECOMMENDATION}}</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ============================================================
+     基本信息与配置
+     ============================================================ -->
+<section class="sec" id="sec-info">
+  <h2 class="sec-t">基本信息与配置</h2>
+  <div class="g2">
+    <div class="card">
+      <div class="row"><span class="row-k">面试日期</span><span class="row-v">{{INTERVIEW_DATE}}</span></div>
+      <div class="row"><span class="row-k">目标职位</span><span class="row-v">{{TARGET_POSITION}}</span></div>
+      <div class="row"><span class="row-k">候选人类型</span><span class="row-v">{{CANDIDATE_TYPE}}</span></div>
+      <div class="row"><span class="row-k">面试轮次与类型</span><span class="row-v">{{INTERVIEW_ROUND}}</span></div>
+    </div>
+    <div class="card">
+      <div class="row"><span class="row-k">面试官风格</span><span class="row-v">{{INTERVIEWER_STYLE}}</span></div>
+      <div class="row"><span class="row-k">压力值</span><span class="row-v">{{PRESSURE_VALUE}}</span></div>
+      <div class="row"><span class="row-k">范围控制</span><span class="row-v">{{SCOPE_CONTROL}}</span></div>
+      <div class="row"><span class="row-k">重点方向</span><span class="row-v">{{FOCUS_AREAS}}</span></div>
+      <div class="row"><span class="row-k">专项环节</span><span class="row-v">{{SPECIAL_SECTIONS}}</span></div>
+      <div class="row"><span class="row-k">反馈模式</span><span class="row-v">{{FEEDBACK_MODE}}</span></div>
+      <div class="row"><span class="row-k">题库使用</span><span class="row-v">{{QUESTION_BANK}}</span></div>
+      <div class="row"><span class="row-k">避免话题</span><span class="row-v">{{AVOIDED_TOPICS}}</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     相关材料摘要
+     ============================================================ -->
+<section class="sec" id="sec-materials">
+  <h2 class="sec-t">相关材料摘要</h2>
+  <div class="card mat">
+    <h4>简历摘要</h4>
+    <p>{{RESUME_SUMMARY}}</p>
+    <h4>职位描述摘要</h4>
+    <p>{{JD_SUMMARY}}</p>
+    <h4>题库或历史记录</h4>
+    <p>{{MATERIALS_NOTE}}</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     面试过程
+     ============================================================ -->
+<section class="sec" id="sec-process">
+  <h2 class="sec-t">面试过程</h2>
+
+  <!-- BEGIN OPTIONAL opening -->
+  <div class="topic">
+    <div class="topic-hd">
+      <span class="topic-tag">开场</span>
+      <h3>{{OPENING_TITLE}}</h3>
+    </div>
+    <div class="topic-bd">
+      <div class="qa">
+        <p class="qa-who i">面试官</p>
+        <p class="qa-txt">{{OPENING_QUESTION}}</p>
+        <p class="qa-who c">候选人</p>
+        <p class="qa-txt">{{OPENING_ANSWER}}</p>
+      </div>
+    </div>
+  </div>
+  <!-- END OPTIONAL opening -->
+
+  <!-- BEGIN REPEAT topic -->
+  <div class="topic">
+    <div class="topic-hd">
+      <span class="topic-tag">主题 {{TOPIC_INDEX}}</span>
+      <h3>{{TOPIC_TITLE}}</h3>
+    </div>
+    <div class="topic-bd">
+      <!-- BEGIN REPEAT qa -->
+      <div class="qa">
+        <p class="qa-who i">面试官</p>
+        <p class="qa-txt">{{QUESTION}}</p>
+        <p class="qa-who c">候选人</p>
+        <p class="qa-txt">{{ANSWER}}</p>
+      </div>
+      <!-- END REPEAT qa -->
+      <div class="obs"><strong>观察记录：</strong>{{OBSERVATION}}</div>
+    </div>
+  </div>
+  <!-- END REPEAT topic -->
+
+  <!-- BEGIN OPTIONAL closing -->
+  <div class="topic">
+    <div class="topic-hd">
+      <span class="topic-tag">收尾</span>
+      <h3>{{CLOSING_TITLE}}</h3>
+    </div>
+    <div class="topic-bd">
+      <div class="qa">
+        <p class="qa-who c">候选人</p>
+        <p class="qa-txt">{{CLOSING_QUESTION}}</p>
+        <p class="qa-who i">面试官</p>
+        <p class="qa-txt">{{CLOSING_ANSWER}}</p>
+      </div>
+    </div>
+  </div>
+  <!-- END OPTIONAL closing -->
+
+</section>
+
+<!-- ============================================================
+     评价总览
+     ============================================================ -->
+<section class="sec" id="sec-overview">
+  <h2 class="sec-t">评价总览</h2>
+  <div class="card">
+    <div class="sc-box">
+      <!-- 根据总分选择对应的 bg- class -->
+      <div class="sc-circle {{SCORE_BG_CLASS}}">
+        <span class="sc-num">{{TOTAL_SCORE}}</span>
+        <span class="sc-lbl">{{SCORE_GRADE}}</span>
+      </div>
+      <div class="sc-info">
+        <h3>{{SCORE_GRADE}}</h3>
+        <p>{{SCORE_COVERAGE}}</p>
+        <p style="margin-top:6px">实际覆盖：{{COVERED_TOPICS}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     分维度评分
+     ============================================================ -->
+<section class="sec" id="sec-dimensions">
+  <h2 class="sec-t">分维度评分</h2>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="dt">
+      <thead>
+        <tr><th>维度</th><th>权重</th><th style="min-width:120px">得分</th><th>依据</th></tr>
+      </thead>
+      <tbody>
+        <!-- BEGIN REPEAT dimension -->
+        <tr>
+          <td class="d-name">{{DIMENSION_NAME}}</td>
+          <td class="d-w">{{WEIGHT}}</td>
+          <td>
+            <span class="d-s" style="color:{{SCORE_COLOR}}">{{DIMENSION_SCORE}}</span>
+            <div class="bar"><div class="bar-in {{FILL_CLASS}}" style="width:{{SCORE_PERCENT}}%"></div></div>
+          </td>
+          <td>{{EVIDENCE}}</td>
+        </tr>
+        <!-- END REPEAT dimension -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================
+     明确优势
+     ============================================================ -->
+<section class="sec" id="sec-strengths">
+  <h2 class="sec-t">明确优势</h2>
+  <div class="card">
+    <ul class="ev">
+      <!-- BEGIN REPEAT strength -->
+      <li><span class="dot dot-s">✓</span><span>{{STRENGTH_ITEM}}</span></li>
+      <!-- END REPEAT strength -->
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================
+     风险与不足
+     ============================================================ -->
+<section class="sec" id="sec-risks">
+  <h2 class="sec-t">风险与不足</h2>
+  <div class="card">
+    <ul class="ev">
+      <!-- BEGIN REPEAT risk -->
+      <li><span class="dot dot-r">✗</span><span>{{RISK_ITEM}}</span></li>
+      <!-- END REPEAT risk -->
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================
+     矛盾、模糊点或知识缺口
+     ============================================================ -->
+<section class="sec" id="sec-gaps">
+  <h2 class="sec-t">矛盾、模糊点或知识缺口</h2>
+  <div class="card">
+    <ul class="ev">
+      <!-- BEGIN REPEAT gap -->
+      <li><span class="dot dot-q">?</span><span>{{CONTRADICTION_ITEM}}</span></li>
+      <!-- END REPEAT gap -->
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================
+     优先改进项
+     ============================================================ -->
+<section class="sec" id="sec-improvements">
+  <h2 class="sec-t">优先改进项</h2>
+  <div class="card">
+    <ol class="ni">
+      <!-- BEGIN REPEAT improvement -->
+      <li>{{IMPROVEMENT_ITEM}}</li>
+      <!-- END REPEAT improvement -->
+    </ol>
+  </div>
+</section>
+
+<!-- ============================================================
+     关键问题的更优回答思路
+     ============================================================ -->
+<section class="sec" id="sec-answers">
+  <h2 class="sec-t">关键问题的更优回答思路</h2>
+  <div class="card">
+    <!-- BEGIN REPEAT better_answer -->
+    <div class="ba">
+      <h4>{{ORIGINAL_QUESTION}}</h4>
+      <p>{{BETTER_APPROACH}}</p>
+    </div>
+    <!-- END REPEAT better_answer -->
+  </div>
+</section>
+
+<!-- ============================================================
+     下一轮展望
+     ============================================================ -->
+<section class="sec" id="sec-next">
+  <h2 class="sec-t">下一轮展望</h2>
+  <div class="card">
+    <div class="rec-center">
+      <!-- 根据推荐结论选择对应的 rec- class -->
+      <div class="rec-tag {{RECOMMENDATION_CLASS}}">{{RECOMMENDATION}}</div>
+      <p class="rec-reason">{{RECOMMENDATION_REASON}}</p>
+    </div>
+    <div style="border-top:1px solid var(--c-border);padding:20px 24px 0;margin-top:8px">
+      <h4 style="font-size:15px;margin-bottom:8px;color:var(--c-primary)">下一轮可能重点考察方向</h4>
+      <p>{{NEXT_ROUND_FOCUS}}</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ── Footer ─────────────────────────────── -->
+<footer class="ftr">
+  <div class="wrap">
+    <p>本报告由 Mock-Interview Skill 生成，结论基于模拟面试的观察，不构成正式招聘决定。</p>
+    <p style="margin-top:4px">生成时间：{{GENERATION_TIMESTAMP}}</p>
+  </div>
+</footer>
+
+</div><!-- /.content -->
+
+<!-- ============================================================
+     滚动高亮脚本：自动高亮侧边栏中当前可视区域对应的链接
+     ============================================================ -->
+<script>
+(function () {
+  var links = document.querySelectorAll('.sidebar a[href^="#"]');
+  var secs = [];
+  links.forEach(function (a) {
+    var el = document.getElementById(a.getAttribute('href').slice(1));
+    if (el) secs.push({ link: a, el: el });
+  });
+  if (!secs.length) return;
+
+  function update() {
+    var cur = secs[0];
+    for (var i = 0; i < secs.length; i++) {
+      if (secs[i].el.getBoundingClientRect().top <= 90) cur = secs[i];
+    }
+    links.forEach(function (a) { a.classList.remove('active'); });
+    cur.link.classList.add('active');
+  }
+
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+})();
+</script>
+
+</body>
+</html>
