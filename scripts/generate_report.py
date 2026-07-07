@@ -231,6 +231,16 @@ def render_topic_block(block, topic, index):
     )
 
 
+def render_topic_nav_block(block, topic, index):
+    return render_placeholders(
+        block,
+        {
+            "TOPIC_INDEX": index,
+            "TOPIC_TITLE": topic["title"],
+        },
+    )
+
+
 def render_simple_list_block(block, item, _index, placeholder):
     return render_placeholders(block, {placeholder: item})
 
@@ -344,6 +354,7 @@ def render_report(template, payload):
         },
     )
 
+    report = replace_repeat_block(report, "topic_nav", topics, render_topic_nav_block)
     report = replace_repeat_block(report, "topic", topics, render_topic_block)
 
     closing = payload.get("closing")
