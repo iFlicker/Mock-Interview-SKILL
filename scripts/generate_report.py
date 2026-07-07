@@ -62,19 +62,15 @@ NA_SCORE_STYLE = {
 
 RECOMMENDATION_STYLES = {
     "强烈建议": {
-        "badge_class": "badge-strong",
         "recommendation_class": "rec-strong",
     },
     "建议": {
-        "badge_class": "badge-yes",
         "recommendation_class": "rec-yes",
     },
     "待定": {
-        "badge_class": "badge-pending",
         "recommendation_class": "rec-pending",
     },
     "不建议": {
-        "badge_class": "badge-no",
         "recommendation_class": "rec-no",
     },
 }
@@ -287,7 +283,6 @@ def build_base_context(payload):
         "CANDIDATE_TYPE": payload["candidate_type"],
         "INTERVIEW_LANGUAGE": payload["interview_language"],
         "RECOMMENDATION": recommendation,
-        "RECOMMENDATION_BADGE_CLASS": recommendation_style["badge_class"],
         "GENERATION_TIMESTAMP": generated_at,
         "INTERVIEWER_STYLE": payload["interviewer_style"],
         "PRESSURE_VALUE": payload["pressure_value"],

@@ -18,15 +18,15 @@
   │  证据不足  │  bg-na               │  fill-na             │
   └────────────┴──────────────────────┴──────────────────────┘
 
-  推荐结论映射（用于 header 徽章和推荐区块）：
-  ┌──────────────┬─────────────────┬──────────────┐
-  │  推荐结论    │  徽章 class      │  区块 class   │
-  ├──────────────┼─────────────────┼──────────────┤
-  │  强烈建议    │  badge-strong    │  rec-strong   │
-  │  建议        │  badge-yes       │  rec-yes      │
-  │  待定        │  badge-pending   │  rec-pending  │
-  │  不建议      │  badge-no        │  rec-no       │
-  └──────────────┴─────────────────┴──────────────┘
+  推荐结论映射（用于推荐区块）：
+  ┌──────────────┬──────────────┐
+  │  推荐结论    │  区块 class   │
+  ├──────────────┼──────────────┤
+  │  强烈建议    │  rec-strong   │
+  │  建议        │  rec-yes      │
+  │  待定        │  rec-pending  │
+  │  不建议      │  rec-no       │
+  └──────────────┴──────────────┘
 -->
 <html lang="zh-CN">
 <head>
@@ -55,7 +55,7 @@
   --shadow-soft: 0 8px 22px rgba(72, 94, 86, .07);
   --r: 12px;
   --r-sm: 8px;
-  --sidebar-w: 248px;
+  --sidebar-w: 276px;
 }
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -111,15 +111,16 @@ body {
 }
 .sidebar a:hover { background: rgba(223, 243, 236, .72); color: var(--c-primary); transform: translateX(2px); }
 .sidebar-subnav {
-  margin: 2px 0 4px 12px;
-  padding-left: 10px;
+  margin: 2px 0 4px 10px;
+  padding-left: 8px;
   border-left: 1px solid #d8e8df;
 }
 .sidebar-subnav a {
   min-height: 28px;
-  padding: 5px 9px;
+  padding: 5px 8px;
   color: #71807b;
   font-size: 12px;
+  line-height: 1.35;
 }
 .sidebar a.active {
   position: relative;
@@ -165,12 +166,6 @@ body {
   padding: 5px 10px; border: 1px solid rgba(221,232,226,.92);
   border-radius: 999px; background: rgba(255,254,250,.74);
 }
-.badge { display: inline-block; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; margin-top: 16px; }
-.badge-strong { background: #e1f5eb; color: #047857; border: 1px solid #a7e2c4; }
-.badge-yes    { background: #e4efff; color: #1d4ed8; border: 1px solid #bdd7ff; }
-.badge-pending{ background: #fff1d6; color: #b45309; border: 1px solid #ffd894; }
-.badge-no     { background: #ffe6e6; color: #b91c1c; border: 1px solid #ffc1c1; }
-
 /* ── Sections ─────────────────────────────── */
 .sec { margin: 34px 0; scroll-margin-top: 24px; }
 .sec-t { font-size: 19px; font-weight: 750; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
@@ -313,7 +308,7 @@ body {
     <a href="#sec-process">面试过程</a>
     <div class="sidebar-subnav">
       <!-- BEGIN REPEAT topic_nav -->
-      <a href="#sec-topic-{{TOPIC_INDEX}}">主题 {{TOPIC_INDEX}} · {{TOPIC_TITLE}}</a>
+      <a href="#sec-topic-{{TOPIC_INDEX}}">{{TOPIC_TITLE}}</a>
       <!-- END REPEAT topic_nav -->
     </div>
   </div>
@@ -348,8 +343,6 @@ body {
       <span>👤 {{CANDIDATE_TYPE}}</span>
       <span>🌐 {{INTERVIEW_LANGUAGE}}</span>
     </div>
-    <!-- 根据推荐结论选择对应的 badge class -->
-    <span class="badge {{RECOMMENDATION_BADGE_CLASS}}">{{RECOMMENDATION}}</span>
   </div>
 </header>
 
@@ -626,6 +619,7 @@ body {
     }
     links.forEach(function (a) { a.classList.remove('active'); });
     cur.link.classList.add('active');
+    cur.link.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   window.addEventListener('scroll', update, { passive: true });
