@@ -77,20 +77,15 @@ body {
   border-radius: 22px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
+  padding-top: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+.sidebar:hover, .sidebar.is-scrolling { scrollbar-color: #c5d8d0 transparent; }
 .sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-thumb { background: #c5d8d0; border-radius: 2px; }
-.sidebar-hd { padding: 22px 18px 16px; }
-.sidebar-brand { display: flex; align-items: center; gap: 12px; }
-.sidebar-hd .icon {
-  width: 40px; height: 40px; border-radius: 14px;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #dff3ec, #fff3df);
-  color: var(--c-primary); font-size: 21px;
-  box-shadow: inset 0 0 0 1px rgba(47,125,120,.10);
-}
-.sidebar-hd .title { color: var(--c-text); font-size: 15px; font-weight: 750; line-height: 1.2; }
-.sidebar-hd .desc { color: var(--c-text-2); font-size: 12px; margin-top: 2px; }
+.sidebar::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+.sidebar:hover::-webkit-scrollbar-thumb,
+.sidebar.is-scrolling::-webkit-scrollbar-thumb { background: #c5d8d0; }
 .sidebar-grp {
   margin: 0 12px 12px; padding: 12px 8px;
   background: rgba(246, 248, 245, .72);
@@ -249,6 +244,31 @@ body {
 .ni li:last-child { border-bottom: none; }
 .ni li::before { content: counter(ni); display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: var(--c-primary); color: #fff; border-radius: 50%; font-size: 13px; font-weight: 700; margin-right: 12px; vertical-align: middle; }
 
+/* ── Knowledge corrections ────────────────── */
+.kc-summary { color: var(--c-text-2); font-size: 14px; margin-bottom: 14px; }
+.kc-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.kc-tools button {
+  border: 1px solid var(--c-border);
+  background: #f8fafc;
+  color: var(--c-primary);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.kc-tools button:hover { background: #e4f4ee; }
+.kc-item { border: 1px solid var(--c-border); border-radius: 12px; background: #fffefa; margin-top: 12px; overflow: hidden; }
+.kc-item summary { cursor: pointer; list-style: none; padding: 14px 18px; background: linear-gradient(90deg, #fff8e8, #f1faf6); display: flex; align-items: center; gap: 10px; }
+.kc-item summary::-webkit-details-marker { display: none; }
+.kc-sev { flex-shrink: 0; background: #fee2e2; color: #dc2626; font-size: 12px; font-weight: 750; padding: 4px 10px; border-radius: 999px; }
+.kc-title { font-weight: 750; }
+.kc-body { padding: 16px 18px 18px; }
+.kc-row { margin-top: 12px; }
+.kc-row:first-child { margin-top: 0; }
+.kc-k { display: block; color: var(--c-primary); font-size: 13px; font-weight: 750; margin-bottom: 3px; }
+.kc-tags { color: var(--c-text-2); }
+
 /* ── Better answer ────────────────────────── */
 .ba { background: #f0fdf4; border-left: 3px solid var(--c-excellent); padding: 14px 20px; border-radius: 0 var(--r-sm) var(--r-sm) 0; margin-bottom: 14px; }
 .ba:last-child { margin-bottom: 0; }
@@ -274,6 +294,8 @@ body {
   .hdr, .sc-circle, .bar-in, .topic-tag, .dot, .ni li::before, .rec-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .card, .topic { box-shadow: none; }
   .topic { break-inside: avoid; }
+  .kc-tools { display: none; }
+  .kc-item { break-inside: avoid; }
 }
 
 /* ── Mobile ───────────────────────────────── */
@@ -292,15 +314,6 @@ body {
      侧边栏导航
      ============================================================ -->
 <nav class="sidebar">
-  <div class="sidebar-hd">
-    <div class="sidebar-brand">
-      <div class="icon">📋</div>
-      <div>
-        <div class="title">面试报告</div>
-        <div class="desc">Interview Archive</div>
-      </div>
-    </div>
-  </div>
   <div class="sidebar-grp">
     <div class="sidebar-cat">面试记录</div>
     <a href="#sec-info">基本信息与配置</a>
@@ -317,14 +330,15 @@ body {
     <a href="#sec-overview">评价总览</a>
     <a href="#sec-dimensions">分维度评分</a>
     <a href="#sec-strengths">明确优势</a>
-    <a href="#sec-risks">风险与不足</a>
-    <a href="#sec-gaps">矛盾与缺口</a>
+    <a href="#sec-issues">主要问题与证据</a>
   </div>
   <div class="sidebar-grp">
     <div class="sidebar-cat">改进建议</div>
-    <a href="#sec-improvements">优先改进项</a>
-    <a href="#sec-answers">更优回答思路</a>
-    <a href="#sec-next">下一轮展望</a>
+    <a href="#sec-actions">优先改进建议</a>
+    <!-- BEGIN OPTIONAL knowledge_nav -->
+    <a href="#sec-knowledge">知识点纠错与学习建议</a>
+    <!-- END OPTIONAL knowledge_nav -->
+    <a href="#sec-next">下一轮建议</a>
   </div>
 </nav>
 
@@ -513,75 +527,95 @@ body {
 </section>
 
 <!-- ============================================================
-     风险与不足
+     主要问题与证据
      ============================================================ -->
-<section class="sec" id="sec-risks">
-  <h2 class="sec-t">风险与不足</h2>
+<section class="sec" id="sec-issues">
+  <h2 class="sec-t">主要问题与证据</h2>
   <div class="card">
     <ul class="ev">
-      <!-- BEGIN REPEAT risk -->
-      <li><span class="dot dot-r">✗</span><span>{{RISK_ITEM}}</span></li>
-      <!-- END REPEAT risk -->
+      <!-- BEGIN REPEAT issue -->
+      <li>
+        <span class="dot dot-r">!</span>
+        <span><strong>{{ISSUE_TYPE}}</strong>：{{ISSUE_EVIDENCE}}<br><em>影响：{{ISSUE_IMPACT}}</em></span>
+      </li>
+      <!-- END REPEAT issue -->
     </ul>
   </div>
 </section>
 
 <!-- ============================================================
-     矛盾、模糊点或知识缺口
+     优先改进建议
      ============================================================ -->
-<section class="sec" id="sec-gaps">
-  <h2 class="sec-t">矛盾、模糊点或知识缺口</h2>
-  <div class="card">
-    <ul class="ev">
-      <!-- BEGIN REPEAT gap -->
-      <li><span class="dot dot-q">?</span><span>{{CONTRADICTION_ITEM}}</span></li>
-      <!-- END REPEAT gap -->
-    </ul>
-  </div>
-</section>
-
-<!-- ============================================================
-     优先改进项
-     ============================================================ -->
-<section class="sec" id="sec-improvements">
-  <h2 class="sec-t">优先改进项</h2>
+<section class="sec" id="sec-actions">
+  <h2 class="sec-t">优先改进建议</h2>
   <div class="card">
     <ol class="ni">
-      <!-- BEGIN REPEAT improvement -->
-      <li>{{IMPROVEMENT_ITEM}}</li>
-      <!-- END REPEAT improvement -->
+      <!-- BEGIN REPEAT action_item -->
+      <li>
+        <strong>{{ACTION_PRIORITY}} · {{ACTION_TARGET}}</strong>
+        <p>{{ACTION_DETAIL}}</p>
+        <p><em>更优回答结构：{{BETTER_APPROACH}}</em></p>
+      </li>
+      <!-- END REPEAT action_item -->
     </ol>
   </div>
 </section>
 
+<!-- BEGIN OPTIONAL knowledge_section -->
 <!-- ============================================================
-     关键问题的更优回答思路
+     知识点纠错与学习建议
      ============================================================ -->
-<section class="sec" id="sec-answers">
-  <h2 class="sec-t">关键问题的更优回答思路</h2>
+<section class="sec" id="sec-knowledge">
+  <h2 class="sec-t">知识点纠错与学习建议</h2>
   <div class="card">
-    <!-- BEGIN REPEAT better_answer -->
-    <div class="ba">
-      <h4>{{ORIGINAL_QUESTION}}</h4>
-      <p>{{BETTER_APPROACH}}</p>
+    <p class="kc-summary">{{KNOWLEDGE_SUMMARY}}</p>
+    <div class="kc-tools" aria-label="知识点纠错展开控制">
+      <button type="button" data-kc-action="open">全部展开</button>
+      <button type="button" data-kc-action="close">全部收起</button>
     </div>
-    <!-- END REPEAT better_answer -->
+    <!-- BEGIN REPEAT knowledge_correction -->
+    <details class="kc-item" {{DETAILS_OPEN}}>
+      <summary>
+        <span class="kc-sev">{{KC_SEVERITY}}</span>
+        <span class="kc-title">{{KC_TOPIC}}</span>
+      </summary>
+      <div class="kc-body">
+        <div class="kc-row">
+          <span class="kc-k">本轮表现</span>
+          <p>{{KC_OBSERVED_ISSUE}}</p>
+        </div>
+        <div class="kc-row">
+          <span class="kc-k">正确理解</span>
+          <p>{{KC_CORRECT_UNDERSTANDING}}</p>
+        </div>
+        <div class="kc-row">
+          <span class="kc-k">面试中更好的回答</span>
+          <p>{{KC_BETTER_INTERVIEW_ANSWER}}</p>
+        </div>
+        <div class="kc-row">
+          <span class="kc-k">学习入口</span>
+          <p class="kc-tags">{{KC_LEARNING_ENTRY}}</p>
+        </div>
+      </div>
+    </details>
+    <!-- END REPEAT knowledge_correction -->
   </div>
 </section>
+<!-- END OPTIONAL knowledge_section -->
 
 <!-- ============================================================
-     下一轮展望
+     下一轮建议
      ============================================================ -->
 <section class="sec" id="sec-next">
-  <h2 class="sec-t">下一轮展望</h2>
+  <h2 class="sec-t">下一轮建议</h2>
   <div class="card">
     <div class="rec-center">
       <!-- 根据推荐结论选择对应的 rec- class -->
-      <div class="rec-tag {{RECOMMENDATION_CLASS}}">{{RECOMMENDATION}}</div>
+      <div class="rec-tag {{RECOMMENDATION_CLASS}}">{{RECOMMENDATION_LABEL}}</div>
       <p class="rec-reason">{{RECOMMENDATION_REASON}}</p>
     </div>
     <div style="border-top:1px solid var(--c-border);padding:20px 24px 0;margin-top:8px">
-      <h4 style="font-size:15px;margin-bottom:8px;color:var(--c-primary)">下一轮可能重点考察方向</h4>
+      <h4 style="font-size:15px;margin-bottom:8px;color:var(--c-primary)">下一轮重点考察方向</h4>
       <p>{{NEXT_ROUND_FOCUS}}</p>
     </div>
   </div>
@@ -605,6 +639,7 @@ body {
 <script>
 (function () {
   var links = document.querySelectorAll('.sidebar a[href^="#"]');
+  var sidebar = document.querySelector('.sidebar');
   var secs = [];
   links.forEach(function (a) {
     var el = document.getElementById(a.getAttribute('href').slice(1));
@@ -624,6 +659,44 @@ body {
 
   window.addEventListener('scroll', update, { passive: true });
   update();
+
+  if (sidebar) {
+    var sidebarScrollTimer;
+    sidebar.addEventListener('scroll', function () {
+      sidebar.classList.add('is-scrolling');
+      window.clearTimeout(sidebarScrollTimer);
+      sidebarScrollTimer = window.setTimeout(function () {
+        sidebar.classList.remove('is-scrolling');
+      }, 700);
+    }, { passive: true });
+  }
+})();
+
+(function () {
+  var section = document.getElementById('sec-knowledge');
+  if (!section) return;
+
+  var items = section.querySelectorAll('details.kc-item');
+  section.querySelectorAll('[data-kc-action]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var shouldOpen = button.getAttribute('data-kc-action') === 'open';
+      items.forEach(function (item) { item.open = shouldOpen; });
+    });
+  });
+
+  var printState = [];
+  window.addEventListener('beforeprint', function () {
+    printState = [];
+    items.forEach(function (item) {
+      printState.push(item.open);
+      item.open = true;
+    });
+  });
+  window.addEventListener('afterprint', function () {
+    items.forEach(function (item, index) {
+      item.open = printState[index];
+    });
+  });
 })();
 </script>
 

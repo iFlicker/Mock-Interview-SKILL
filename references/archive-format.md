@@ -1,6 +1,6 @@
-# 面试留档格式
+# 面试报告生成格式
 
-仅在用户明确同意留档后读取本文件。
+仅在用户明确同意生成面试报告后读取本文件。
 
 ## 保存规则
 
@@ -66,9 +66,9 @@ python3 scripts/generate_report.py \
 | `resume_summary` | string | 仅保留与评价有关的简历摘要 |
 | `total_score` | int | 加权总分，`0～100` |
 | `score_coverage` | string | 评分覆盖度与可信度说明 |
-| `recommendation` | string | 只能是 `强烈建议`、`建议`、`待定`、`不建议` |
-| `recommendation_reason` | string | 推荐结论的依据 |
-| `next_round_focus` | string | 下一轮可能重点考察的方向 |
+| `recommendation` | string | 下一轮建议中的推荐结论，只能是 `强烈建议`、`建议`、`待定`、`不建议` |
+| `recommendation_reason` | string | 下一轮建议中的结论依据 |
+| `next_round_focus` | string | 下一轮建议中的重点考察方向 |
 | `topics` | array | 至少一个主题或考察项 |
 | `dimensions` | array | 至少一个评分维度 |
 
@@ -85,10 +85,11 @@ python3 scripts/generate_report.py \
 | `covered_topics` | string or array | 实际覆盖的主题或考察项；数组会自动拼接 |
 | `generated_at` | string | 报告生成时间；缺省时脚本自动写入当前时间 |
 | `strengths` | array | 明确优势列表；为空时脚本会写入 `未记录` |
-| `risks` | array | 风险与不足列表；为空时脚本会写入 `未记录` |
-| `gaps` | array | 矛盾、模糊点或知识缺口；为空时脚本会写入 `未记录` |
-| `improvements` | array | 优先改进项；为空时脚本会写入 `未记录` |
-| `better_answers` | array | 更优回答思路；为空时脚本会写入 `未记录` |
+| `issues` | array | 主要问题与证据；为空时脚本会写入 `未记录` |
+| `action_items` | array | 优先改进建议；为空时脚本会写入 `未记录` |
+| `knowledge_corrections` | array | 知识点纠错与学习建议；为空或省略时报告不展示该模块 |
+
+兼容旧 payload 时，脚本会把 `risks` 和 `gaps` 折叠为 `issues`，把 `improvements` 和 `better_answers` 折叠为 `action_items`。新面试报告应优先使用 `issues` 和 `action_items`。
 
 ### 可选对象
 
@@ -140,14 +141,47 @@ python3 scripts/generate_report.py \
 | `score` | int or null | 具体得分，或 `null` 表示证据不足 |
 | `evidence` | string | 评分依据 |
 
-### 更优回答结构
+### 主要问题结构
 
-`better_answers` 中每个元素包含：
+`issues` 中每个元素包含：
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `question` | string | 原始问题 |
-| `approach` | string | 更优回答思路 |
+| `type` | string | 问题类型，例如风险、不足、矛盾、知识缺口或证据不足 |
+| `evidence` | string | 对应的具体回答、行为或观察 |
+| `impact` | string | 对通过率、职级判断或下一轮考察的影响 |
+
+### 优先改进建议结构
+
+`action_items` 中每个元素包含：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `priority` | string | 优先级，例如 P0、P1、P2 |
+| `target` | string | 针对的具体问题 |
+| `action` | string | 应补充的证据、知识点或练习动作 |
+| `better_approach` | string | 更好的回答结构；不得编造经历 |
+
+### 知识点纠错与学习建议结构
+
+`knowledge_corrections` 中每个元素包含：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `severity` | string | 严重程度，例如核心缺口、一般缺口或 P0、P1、P2 |
+| `topic` | string | 知识点名称 |
+| `observed_issue` | string | 本轮表现，只记录实际问到且没答上、答错或关键机制缺失的内容 |
+| `correct_understanding` | string | 正确理解，可以比其他字段稍详细，但不要写成大篇幅教程 |
+| `better_interview_answer` | string | 面试中更好的回答组织方式 |
+| `learning_entry` | string or array | 学习入口；数组会自动拼接为短标签 |
+
+展示规则：
+
+- 仅在专业面试中使用；非专业面通常不需要构造本字段。
+- 没有需要纠错或补课的知识点时，省略该字段或传空数组，报告中不会展示该模块。
+- 只记录本轮实际问到的知识点，不扩展成完整课程。
+- `correct_understanding` 允许稍微展开，目标是给用户正确答案的骨架和关键边界，而不是完整教材。
+- 同一知识点如果已经写入 `knowledge_corrections`，`issues` 中只保留一句诊断和影响，不展开正确理解、学习入口或完整回答思路。
 
 ## 最小示例
 
@@ -194,13 +228,34 @@ python3 scripts/generate_report.py \
   "score_coverage": "覆盖了 1 个核心主题，可信度有限。",
   "covered_topics": ["缓存一致性"],
   "strengths": ["能说明主链路设计和异常补偿思路。"],
-  "risks": ["缺少结果指标。"],
-  "gaps": ["极端失败场景回答不够具体。"],
-  "improvements": ["补充结果数据。", "补充失败案例。", "补充边界条件。"],
-  "better_answers": [
+  "issues": [
     {
-      "question": "你如何处理缓存与数据库双写一致性？",
-      "approach": "按正常路径、异常路径、补偿机制和监控指标分层回答。"
+      "type": "知识缺口",
+      "evidence": "极端失败场景回答不够具体。",
+      "impact": "下一轮可能继续验证异常路径和边界处理能力。"
+    },
+    {
+      "type": "证据不足",
+      "evidence": "没有给出稳定性优化后的结果指标。",
+      "impact": "削弱了业务结果和个人贡献的可信度。"
+    }
+  ],
+  "action_items": [
+    {
+      "priority": "P0",
+      "target": "缓存与数据库双写一致性问题",
+      "action": "补充异常路径、补偿机制、监控指标和一次真实故障复盘。",
+      "better_approach": "按正常路径、异常路径、补偿机制和监控指标分层回答。"
+    }
+  ],
+  "knowledge_corrections": [
+    {
+      "severity": "核心缺口",
+      "topic": "缓存与数据库一致性",
+      "observed_issue": "回答了缓存失效主流程，但没有说明并发写、失败补偿和一致性边界。",
+      "correct_understanding": "这类问题通常不是追求绝对强一致，而是先判断业务能否接受短暂不一致，再通过更新数据库后删除缓存、失败重试、消息补偿、幂等处理和监控告警，把不一致窗口控制在可接受范围内。延迟双删可以降低部分并发读写造成脏缓存的概率，但不是银弹，仍要结合业务一致性要求和异常补偿设计。",
+      "better_interview_answer": "先说明一致性目标，再拆正常路径、异常路径、补偿机制、监控指标和取舍边界。",
+      "learning_entry": ["缓存失效策略", "最终一致性", "幂等重试", "消息可靠投递"]
     }
   ],
   "recommendation": "建议",
@@ -214,5 +269,5 @@ python3 scripts/generate_report.py \
 - 只记录实际提出的问题和用户实际给出的回答。
 - 非专业面通常没有开场自我介绍；没有就不要构造 `opening`。
 - 未进行收尾问答时，不要构造 `closing`。
-- 保留不确定性和“证据不足”标记，不得为了显得完整而改写留档内容。
+- 保留不确定性和“证据不足”标记，不得为了显得完整而改写报告内容。
 - 最终 HTML 文件是自包含的，可以直接在浏览器中打开查看或打印。

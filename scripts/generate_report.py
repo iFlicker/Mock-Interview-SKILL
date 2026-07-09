@@ -63,15 +63,19 @@ NA_SCORE_STYLE = {
 RECOMMENDATION_STYLES = {
     "强烈建议": {
         "recommendation_class": "rec-strong",
+        "recommendation_label": "进行下一轮面试：强烈建议",
     },
     "建议": {
         "recommendation_class": "rec-yes",
+        "recommendation_label": "进行下一轮面试：建议",
     },
     "待定": {
         "recommendation_class": "rec-pending",
+        "recommendation_label": "进行下一轮面试：待定",
     },
     "不建议": {
         "recommendation_class": "rec-no",
+        "recommendation_label": "进行下一轮面试：不建议",
     },
 }
 
@@ -241,6 +245,128 @@ def render_simple_list_block(block, item, _index, placeholder):
     return render_placeholders(block, {placeholder: item})
 
 
+def normalize_issues(payload):
+    if payload.get("issues"):
+        return payload["issues"]
+
+    issues = []
+    for risk in payload.get("risks") or []:
+        issues.append(
+            {
+                "type": "风险或不足",
+                "evidence": risk,
+                "impact": "可能影响岗位匹配度或下一轮判断。",
+            }
+        )
+    for gap in payload.get("gaps") or []:
+        issues.append(
+            {
+                "type": "矛盾、模糊点或知识缺口",
+                "evidence": gap,
+                "impact": "需要在后续追问中继续验证。",
+            }
+        )
+    return issues or [{"type": "未记录", "evidence": "未记录", "impact": "未记录"}]
+
+
+def normalize_action_items(payload):
+    if payload.get("action_items"):
+        return payload["action_items"]
+
+    actions = []
+    better_answers = payload.get("better_answers") or []
+    max_len = max(len(payload.get("improvements") or []), len(better_answers))
+    for index in range(max_len):
+        improvement = (
+            payload.get("improvements", [])[index]
+            if index < len(payload.get("improvements") or [])
+            else "未记录"
+        )
+        better_answer = better_answers[index] if index < len(better_answers) else {}
+        actions.append(
+            {
+                "priority": f"P{index}",
+                "target": better_answer.get("question", "未记录"),
+                "action": improvement,
+                "better_approach": better_answer.get("approach", "未记录"),
+            }
+        )
+    return actions or [
+        {
+            "priority": "未记录",
+            "target": "未记录",
+            "action": "未记录",
+            "better_approach": "未记录",
+        }
+    ]
+
+
+def render_issue_block(block, item, _index):
+    return render_placeholders(
+        block,
+        {
+            "ISSUE_TYPE": item.get("type", "未记录"),
+            "ISSUE_EVIDENCE": item.get("evidence", "未记录"),
+            "ISSUE_IMPACT": item.get("impact", "未记录"),
+        },
+    )
+
+
+def render_action_item_block(block, item, _index):
+    return render_placeholders(
+        block,
+        {
+            "ACTION_PRIORITY": item.get("priority", "未记录"),
+            "ACTION_TARGET": item.get("target", "未记录"),
+            "ACTION_DETAIL": item.get("action", "未记录"),
+            "BETTER_APPROACH": item.get("better_approach", "未记录"),
+        },
+    )
+
+
+def get_knowledge_corrections(payload):
+    return payload.get("knowledge_corrections") or []
+
+
+def should_open_knowledge_item(item):
+    severity = stringify(item.get("severity")).lower()
+    return (
+        "核心" in severity
+        or "p0" in severity
+        or "严重" in severity
+        or "critical" in severity
+    )
+
+
+def get_knowledge_summary(items):
+    total = len(items)
+    core_count = sum(1 for item in items if should_open_knowledge_item(item))
+    general_count = total - core_count
+    parts = [f"本轮发现 {total} 个需要补齐的知识点"]
+    if core_count:
+        parts.append(f"{core_count} 个核心缺口")
+    if general_count:
+        parts.append(f"{general_count} 个一般缺口")
+    return "：{}。".format("，".join(parts))
+
+
+def render_knowledge_correction_block(block, item, _index):
+    return render_placeholders(
+        block,
+        {
+            "DETAILS_OPEN": "open" if should_open_knowledge_item(item) else "",
+            "KC_SEVERITY": item.get("severity", "一般缺口"),
+            "KC_TOPIC": item.get("topic", "未记录"),
+            "KC_OBSERVED_ISSUE": item.get("observed_issue", "未记录"),
+            "KC_CORRECT_UNDERSTANDING": item.get("correct_understanding", "未记录"),
+            "KC_BETTER_INTERVIEW_ANSWER": item.get(
+                "better_interview_answer", "未记录"
+            ),
+            "KC_LEARNING_ENTRY": item.get("learning_entry", "未记录"),
+        },
+    )
+
+
 def sanitize_filename_part(value):
     sanitized = re.sub(r'[\\/:*?"<>|]+', "-", stringify(value))
     sanitized = re.sub(r"\s+", "-", sanitized).strip("-")
@@ -301,6 +427,7 @@ def build_base_context(payload):
         "SCORE_COVERAGE": payload["score_coverage"],
         "COVERED_TOPICS": covered_topics,
         "RECOMMENDATION_CLASS": recommendation_style["recommendation_class"],
+        "RECOMMENDATION_LABEL": recommendation_style["recommendation_label"],
         "RECOMMENDATION_REASON": payload["recommendation_reason"],
         "NEXT_ROUND_FOCUS": payload["next_round_focus"],
     }
@@ -381,38 +508,30 @@ def render_report(template, payload):
     )
     report = replace_repeat_block(
         report,
-        "risk",
-        payload.get("risks") or ["未记录"],
-        lambda block, item, index: render_simple_list_block(block, item, index, "RISK_ITEM"),
+        "issue",
+        normalize_issues(payload),
+        render_issue_block,
     )
     report = replace_repeat_block(
         report,
-        "gap",
-        payload.get("gaps") or ["未记录"],
-        lambda block, item, index: render_simple_list_block(
-            block, item, index, "CONTRADICTION_ITEM"
-        ),
+        "action_item",
+        normalize_action_items(payload),
+        render_action_item_block,
     )
+    knowledge_corrections = get_knowledge_corrections(payload)
     report = replace_repeat_block(
         report,
-        "improvement",
-        payload.get("improvements") or ["未记录"],
-        lambda block, item, index: render_simple_list_block(
-            block, item, index, "IMPROVEMENT_ITEM"
-        ),
+        "knowledge_correction",
+        knowledge_corrections,
+        render_knowledge_correction_block,
     )
-    report = replace_repeat_block(
-        report,
-        "better_answer",
-        payload.get("better_answers") or [{"question": "未记录", "approach": "未记录"}],
-        lambda block, item, _index: render_placeholders(
-            block,
-            {
-                "ORIGINAL_QUESTION": item["question"],
-                "BETTER_APPROACH": item["approach"],
-            },
-        ),
+    knowledge_context = (
+        {"KNOWLEDGE_SUMMARY": get_knowledge_summary(knowledge_corrections)}
+        if knowledge_corrections
+        else None
     )
+    report = replace_optional_block(report, "knowledge_nav", knowledge_context)
+    report = replace_optional_block(report, "knowledge_section", knowledge_context)
 
     report = render_placeholders(report, base_context)
     if "{{" in report or "}}" in report:

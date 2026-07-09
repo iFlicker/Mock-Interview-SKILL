@@ -11,7 +11,7 @@ description: "基于用户真实简历开展沉浸式模拟面试，支持技术
 
 - 确定候选人类型和面试轮次后，读取 [references/interview-matrix.md](references/interview-matrix.md)，用于选择轮次策略、主题或考察项数量、压力表现和可配置项。
 - 输出最终评价前，读取 [references/scoring-rubrics.md](references/scoring-rubrics.md)。
-- 仅在用户明确同意留档后，读取 [references/archive-format.md](references/archive-format.md)、[scripts/generate_report.py](scripts/generate_report.py) 和 [scripts/report-template.html](scripts/report-template.html)。
+- 仅在用户明确同意生成面试报告后，读取 [references/archive-format.md](references/archive-format.md)、[scripts/generate_report.py](scripts/generate_report.py) 和 [scripts/report-template.html](scripts/report-template.html)。
 
 ## 按顺序完成前置检查
 
@@ -180,11 +180,11 @@ description: "基于用户真实简历开展沉浸式模拟面试，支持技术
 
 评价完成后，原样询问：
 
-> 是否将本轮面试留档？默认不留档。
+> 是否为本轮面试生成面试报告？默认不生成。
 
-除非用户明确同意，否则不得创建或修改任何面试记录，也不得声称已经永久记住本轮内容。
+除非用户明确同意，否则不得创建或修改任何面试报告，也不得声称已经永久记住本轮内容。
 
-## 仅在明确同意后留档
+## 仅在明确同意后生成面试报告
 
 用户同意后，读取 `references/archive-format.md`、`scripts/generate_report.py` 和 `scripts/report-template.html`。先按照 `archive-format.md` 中定义的 payload 结构整理本轮面试数据并写入临时 JSON，再运行脚本生成最终 HTML。不得手工替换模板占位符，也不得手工复制重复区块。脚本会自动删除未发生的开场或收尾区块，并对用户原话中的 HTML 或尖括号做转义。除非用户要求保留中间文件，否则在成功生成 HTML 后删除临时 JSON。默认保存到当前已授权工作区中 `interview-records/` 目录下；也可以保存到用户另行授权的路径。不得复制完整原始简历，只保留与评价有关的必要摘要。
 
