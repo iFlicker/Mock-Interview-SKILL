@@ -7,6 +7,7 @@
 - 默认目录：当前已授权工作目录下的 `interview-records/`。
 - 默认文件名：`YYYY-MM-DD-目标职位-面试轮次.html`。
 - 使用 `scripts/generate_report.py --output-dir <目录>` 时，脚本会自动生成上述文件名，并清理路径分隔符和文件系统不允许的字符。
+- 如果目标文件已经存在，脚本默认追加 `-2`、`-3` 等数字后缀，不覆盖旧报告。只有用户明确要求覆盖旧文件时，才可使用 `--overwrite`。
 - 用户指定其他已授权路径或只要求保存评价摘要时，按照用户要求执行。
 - 用户未同意、意思不明确或明确拒绝时，不得创建文件。
 - 不得复制完整原始简历，只保留支持评价所必需的最少摘要。
@@ -29,6 +30,8 @@
 - 展开重复区块，如主题、问答、评分维度、优势与改进项；
 - 删除未发生的可选区块，如非专业面的开场、未进行的收尾问答；
 - 根据总分和推荐结论自动选择颜色等级与 CSS class；
+- 校验并兼容支持的报告 payload `schema_version`；
+- 校验日期、候选人类型、反馈模式、压力值、维度权重、评分覆盖率、分数范围、总分计算和推荐结论约束；
 - 对用户原话、题目内容和摘要做 HTML 转义，避免尖括号、代码片段或脚本内容破坏页面结构；
 - 在生成结束前检查是否仍有未替换的占位符。
 
@@ -48,12 +51,24 @@ python3 scripts/generate_report.py \
   --output /path/to/interview-records/2026-07-06-后端开发-专业二面.html
 ```
 
+仅在用户明确要求覆盖已有报告时使用：
+
+```bash
+python3 scripts/generate_report.py \
+  --input /path/to/report-payload.json \
+  --output /path/to/interview-records/report.html \
+  --overwrite
+```
+
 ## Payload 结构
+
+当前报告 payload 版本为 `mock-interview-report/2.0`。`schema_version` 用于区分报告数据契约，不等同于 `session-state.md` 中的会话状态版本。字段发生不兼容变化时升级主版本；只增加向后兼容字段时升级次版本。生成器继续接受没有 `schema_version` 的旧 payload，并按旧版兼容模式处理；新报告必须显式提供当前版本。
 
 ### 顶层必填字段
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
+| `schema_version` | string | 当前必须为 `mock-interview-report/2.0` |
 | `interview_date` | string | 面试日期，格式 `YYYY-MM-DD` |
 | `target_position` | string | 目标职位 |
 | `interview_round` | string | 面试轮次与类型 |
@@ -64,25 +79,36 @@ python3 scripts/generate_report.py \
 | `scope_control` | string | 范围控制说明 |
 | `feedback_mode` | string | `纯模拟` 或 `教练模式` |
 | `resume_summary` | string | 仅保留与评价有关的简历摘要 |
-| `total_score` | int | 加权总分，`0～100` |
-| `score_coverage` | string | 评分覆盖度与可信度说明 |
+| `completion_status` | string | `completed`、`ended_early` 或 `insufficient_evidence` |
+| `total_score` | int or null | 加权总分，`0～100`；没有任何可评分维度时必须为 `null` |
+| `scored_weight` | int | 已取得数字得分的维度权重，`0～100`，也是评分覆盖率 |
+| `score_coverage_note` | string | 评分覆盖范围、缺失维度和可信度说明 |
 | `recommendation` | string | 下一轮建议中的推荐结论，只能是 `强烈建议`、`建议`、`待定`、`不建议` |
 | `recommendation_reason` | string | 下一轮建议中的结论依据 |
 | `next_round_focus` | string | 下一轮建议中的重点考察方向 |
-| `topics` | array | 至少一个主题或考察项 |
+| `topics` | array | 主题或考察项；用户在取得有效回答前结束时可以为空数组 |
 | `dimensions` | array | 至少一个评分维度 |
+
+`dimensions` 来自面试开始前冻结的评分蓝图，全部权重必须合计为 100%。证据不足的维度使用 `score: null`，但其权重仍计入 100%；`scored_weight` 必须等于有数字得分的维度权重之和。`scored_weight` 大于 0 时，`total_score` 按已评分维度重新归一化计算并四舍五入为整数；等于 0 时，`total_score` 必须为 `null`，不得用 0 分代替证据不足。
 
 ### 顶层常用可选字段
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `focus_areas` | string or array | 重点考察方向；数组会自动拼接 |
+| `target_seniority` | string | 目标职级或资历基准 |
+| `interview_stage` | string | 初筛、一面、二面、三面、终面等阶段 |
+| `interviewer_role` | string | 人力资源、资深员工、经理、总监、高管等角色 |
+| `interview_format` | string | 综合专业、行为、算法、系统设计等形式 |
+| `style_modifier` | string | 常规或压力面试 |
 | `special_sections` | string | 专项环节说明；无则填 `无` |
 | `question_bank` | string | 题库使用说明；无则填 `未使用` |
 | `avoided_topics` | string | 避免话题；无则填 `无` |
 | `jd_summary` | string | 职位描述摘要；无则填 `未提供` |
 | `materials_note` | string | 题库或历史记录说明；无则填 `未使用` |
 | `covered_topics` | string or array | 实际覆盖的主题或考察项；数组会自动拼接 |
+| `score_coverage` | string | 旧版兼容字段；新报告使用 `scored_weight` 和 `score_coverage_note` |
+| `coaching_note` | string | 教练模式下说明提示对后续回答和评分可信度的影响；纯模拟可省略 |
 | `generated_at` | string | 报告生成时间；缺省时脚本自动写入当前时间 |
 | `strengths` | array | 明确优势列表；为空时脚本会写入 `未记录` |
 | `issues` | array | 主要问题与证据；为空时脚本会写入 `未记录` |
@@ -121,7 +147,7 @@ python3 scripts/generate_report.py \
 |---|---|---|
 | `title` | string | 主题标题 |
 | `qa_pairs` | array | 至少一个问答对 |
-| `observation` | string | 该主题的关键观察记录 |
+| `observation` | string | 该主题的总结；保留字段名以兼容已有 payload |
 
 `qa_pairs` 中每个元素都必须包含：
 
@@ -129,6 +155,7 @@ python3 scripts/generate_report.py \
 |---|---|---|
 | `question` | string | 面试官提问 |
 | `answer` | string | 候选人回答 |
+| `evidence_origin` | string | 可选，`independent` 或 `coached`；教练模式下应提供 |
 
 ### 评分维度结构
 
@@ -187,6 +214,7 @@ python3 scripts/generate_report.py \
 
 ```json
 {
+  "schema_version": "mock-interview-report/2.0",
   "interview_date": "2026-07-06",
   "target_position": "后端开发工程师",
   "interview_round": "专业二面",
@@ -196,6 +224,7 @@ python3 scripts/generate_report.py \
   "pressure_value": 55,
   "scope_control": "6 个主题",
   "feedback_mode": "纯模拟",
+  "completion_status": "completed",
   "resume_summary": "最近三年负责交易链路服务治理和稳定性优化。",
   "jd_summary": "负责高并发交易系统的设计与优化。",
   "topics": [
@@ -213,19 +242,20 @@ python3 scripts/generate_report.py \
   "dimensions": [
     {
       "name": "专业深度",
-      "weight": "20%",
+      "weight": "60%",
       "score": 78,
       "evidence": "能解释主要一致性策略与风险点。"
     },
     {
       "name": "业务结果",
-      "weight": "15%",
+      "weight": "40%",
       "score": null,
       "evidence": "证据不足：缺少量化结果。"
     }
   ],
   "total_score": 78,
-  "score_coverage": "覆盖了 1 个核心主题，可信度有限。",
+  "scored_weight": 60,
+  "score_coverage_note": "专业深度已评分；业务结果证据不足，结论可信度有限。",
   "covered_topics": ["缓存一致性"],
   "strengths": ["能说明主链路设计和异常补偿思路。"],
   "issues": [
@@ -267,7 +297,9 @@ python3 scripts/generate_report.py \
 ## 注意事项
 
 - 只记录实际提出的问题和用户实际给出的回答。
+- 教练模式下为问答记录 `evidence_origin`，并在 `coaching_note` 中说明提示对评分的影响。
 - 非专业面通常没有开场自我介绍；没有就不要构造 `opening`。
 - 未进行收尾问答时，不要构造 `closing`。
 - 保留不确定性和“证据不足”标记，不得为了显得完整而改写报告内容。
-- 最终 HTML 文件是自包含的，可以直接在浏览器中打开查看或打印。
+- 用户在取得有效回答前结束时，允许 `topics: []`、`scored_weight: 0` 和 `total_score: null`；此时 `completion_status` 必须为 `insufficient_evidence`，推荐结论只能为 `待定` 或 `不建议`。
+- 最终 HTML 文件是自包含的，不引用网络字体或其他外部资源，可以离线打开、查看或打印。

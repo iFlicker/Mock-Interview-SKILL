@@ -12,9 +12,15 @@ SCRIPT_PATH = Path(__file__).with_name("generate_report.py")
 class GenerateReportTest(unittest.TestCase):
     def test_generate_report_renders_distinct_sections_and_escapes_html(self):
         payload = {
+            "schema_version": "mock-interview-report/2.0",
             "interview_date": "2026-07-06",
             "target_position": "AI/ML Engineer",
             "interview_round": "行为面试/终面",
+            "target_seniority": "高级",
+            "interview_stage": "终面",
+            "interviewer_role": "招聘经理",
+            "interview_format": "行为面试",
+            "style_modifier": "常规",
             "candidate_type": "社招候选人",
             "interview_language": "中文",
             "interviewer_style": "礼貌但直接",
@@ -56,19 +62,21 @@ class GenerateReportTest(unittest.TestCase):
                 },
             ],
             "closing": None,
-            "total_score": 78,
-            "score_coverage": "覆盖了 2 个行为主题，可信度中等。",
+            "completion_status": "completed",
+            "total_score": 82,
+            "scored_weight": 60,
+            "score_coverage_note": "沟通表达已评分；业务结果证据不足。",
             "covered_topics": ["冲突处理", "跨团队协作"],
             "dimensions": [
                 {
                     "name": "沟通表达",
-                    "weight": "30%",
+                    "weight": "60%",
                     "score": 82,
                     "evidence": "回答结构清楚，能交代背景和行动。",
                 },
                 {
                     "name": "业务结果",
-                    "weight": "20%",
+                    "weight": "40%",
                     "score": None,
                     "evidence": "证据不足：没有给出明确结果数据。",
                 },
@@ -127,12 +135,25 @@ class GenerateReportTest(unittest.TestCase):
             self.assertNotIn("RECOMMENDATION_BADGE_CLASS", report)
             self.assertIn("scrollIntoView", report)
             self.assertIn("is-scrolling", report)
+            self.assertNotIn("https://fonts.googleapis.com", report)
+            self.assertIn('<span class="chat-role i">面试官</span>', report)
+            self.assertIn('<span class="chat-role c">候选人</span>', report)
             self.assertIn('href="#sec-topic-1"', report)
             self.assertIn('id="sec-topic-1"', report)
             self.assertIn("主要问题与证据", report)
             self.assertIn("优先改进建议", report)
             self.assertIn("下一轮建议", report)
-            self.assertIn("进行下一轮面试：建议", report)
+            self.assertIn("建议进行下一轮面试", report)
+            self.assertNotIn("进行下一轮面试：建议", report)
+            self.assertIn("<dt>完成状态</dt>", report)
+            self.assertIn("<dt>证据说明</dt>", report)
+            self.assertIn("<dt>实际覆盖</dt>", report)
+            self.assertNotIn("<h3>良好</h3>", report)
+            self.assertIn("总结", report)
+            self.assertNotIn("观察记录", report)
+            self.assertIn("已评分权重 60%", report)
+            self.assertIn("目标职级", report)
+            self.assertIn("招聘经理", report)
             self.assertNotIn("下一轮展望", report)
             self.assertIn("风险或不足", report)
             self.assertIn("按时间线说明预警、升级和备选方案。", report)
@@ -150,8 +171,25 @@ class GenerateReportTest(unittest.TestCase):
             self.assertNotIn("Interview Report</div>", report)
             self.assertNotIn('<div class="sidebar-hd">', report)
 
+            second_result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--input",
+                    str(input_path),
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(second_result.returncode, 0, second_result.stderr)
+            self.assertEqual(len(list(output_dir.glob("*.html"))), 2)
+            self.assertTrue(any(path.stem.endswith("-2") for path in output_dir.glob("*.html")))
+
     def test_generate_report_renders_optional_knowledge_corrections(self):
         payload = {
+            "schema_version": "mock-interview-report/2.0",
             "interview_date": "2026-07-06",
             "target_position": "后端开发工程师",
             "interview_round": "专业二面",
@@ -182,8 +220,10 @@ class GenerateReportTest(unittest.TestCase):
                     "evidence": "能说出基础策略，但缺少并发和补偿机制。",
                 }
             ],
+            "completion_status": "completed",
             "total_score": 62,
-            "score_coverage": "覆盖了 1 个核心主题。",
+            "scored_weight": 100,
+            "score_coverage_note": "覆盖了 1 个核心主题。",
             "recommendation": "待定",
             "recommendation_reason": "基础方向正确，但关键机制缺失。",
             "next_round_focus": "继续验证一致性边界和异常补偿。",
@@ -253,16 +293,162 @@ class GenerateReportTest(unittest.TestCase):
             self.assertNotIn("{{", report)
             self.assertIn('href="#sec-knowledge"', report)
             self.assertIn('id="sec-knowledge"', report)
-            self.assertIn("知识点纠错与学习建议", report)
+            self.assertIn('<h2 class="sec-t">知识点纠错与学习建议</h2>', report)
             self.assertIn("下一轮建议", report)
-            self.assertIn("进行下一轮面试：待定", report)
+            self.assertIn("待定：是否进行下一轮面试", report)
             self.assertIn("本轮发现 2 个需要补齐的知识点，1 个核心缺口，1 个一般缺口。", report)
             self.assertIn('<details class="kc-item" open>', report)
             self.assertIn("全部展开", report)
             self.assertIn("全部收起", report)
             self.assertIn("缓存与数据库一致性", report)
             self.assertIn("这类问题通常不是追求绝对强一致", report)
-            self.assertIn("缓存失效策略、最终一致性、幂等重试", report)
+            self.assertIn('<span class="kc-tag">缓存失效策略</span>', report)
+            self.assertIn('<span class="kc-tag">最终一致性</span>', report)
+            self.assertIn('<span class="kc-tag">幂等重试</span>', report)
+
+    def test_generate_report_supports_insufficient_evidence_without_numeric_score(self):
+        payload = {
+            "schema_version": "mock-interview-report/2.0",
+            "interview_date": "2026-07-11",
+            "target_position": "后端开发工程师",
+            "interview_round": "专业二面",
+            "candidate_type": "社招候选人",
+            "interview_language": "中文",
+            "interviewer_style": "严谨",
+            "pressure_value": 55,
+            "scope_control": "6 个主题",
+            "feedback_mode": "纯模拟",
+            "resume_summary": "负责后端服务治理。",
+            "completion_status": "insufficient_evidence",
+            "topics": [],
+            "dimensions": [
+                {
+                    "name": "专业深度",
+                    "weight": "60%",
+                    "score": None,
+                    "evidence": "证据不足：尚未取得有效回答。",
+                },
+                {
+                    "name": "问题解决能力",
+                    "weight": "40%",
+                    "score": None,
+                    "evidence": "证据不足：尚未取得有效回答。",
+                },
+            ],
+            "total_score": None,
+            "scored_weight": 0,
+            "score_coverage_note": "面试在取得有效回答前结束，无法计算总分。",
+            "recommendation": "待定",
+            "recommendation_reason": "没有足够证据支持招聘建议。",
+            "next_round_focus": "重新完成专业能力和问题解决能力考察。",
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            input_path = tmp_path / "payload.json"
+            output_dir = tmp_path / "reports"
+            input_path.write_text(
+                json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--input",
+                    str(input_path),
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = next(output_dir.glob("*.html")).read_text(encoding="utf-8")
+            self.assertNotIn("{{", report)
+            self.assertIn("证据不足", report)
+            self.assertIn("已评分权重 0%", report)
+            self.assertIn("本轮在取得有效回答前结束", report)
+            self.assertNotIn('id="sec-topic-1"', report)
+
+    def test_generate_report_rejects_invalid_dimension_weights(self):
+        payload = {
+            "interview_date": "2026-07-06",
+            "target_position": "后端开发工程师",
+            "interview_round": "专业二面",
+            "candidate_type": "社招候选人",
+            "interview_language": "中文",
+            "interviewer_style": "严谨",
+            "pressure_value": 55,
+            "scope_control": "1 个主题",
+            "feedback_mode": "纯模拟",
+            "resume_summary": "负责后端服务治理。",
+            "topics": [
+                {
+                    "title": "稳定性",
+                    "qa_pairs": [{"question": "如何治理？", "answer": "分层治理。"}],
+                    "observation": "证据有限。",
+                }
+            ],
+            "dimensions": [
+                {
+                    "name": "专业深度",
+                    "weight": "80%",
+                    "score": 70,
+                    "evidence": "能够说明基础方法。",
+                }
+            ],
+            "total_score": 70,
+            "score_coverage": "覆盖有限。",
+            "recommendation": "待定",
+            "recommendation_reason": "仍需验证。",
+            "next_round_focus": "继续验证稳定性能力。",
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            input_path = tmp_path / "payload.json"
+            input_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--input",
+                    str(input_path),
+                    "--output-dir",
+                    str(tmp_path / "reports"),
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Dimension weights must total 100%", result.stderr)
+
+    def test_generate_report_rejects_unsupported_schema_version(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            input_path = tmp_path / "payload.json"
+            input_path.write_text(
+                json.dumps({"schema_version": "mock-interview-report/99.0"}),
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--input",
+                    str(input_path),
+                    "--output-dir",
+                    str(tmp_path / "reports"),
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Unsupported schema_version", result.stderr)
 
 
 if __name__ == "__main__":

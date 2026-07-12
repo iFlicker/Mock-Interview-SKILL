@@ -1,0 +1,194 @@
+{
+  "schema_version": "mock-interview-contract/1.0",
+  "scenarios": [
+    {
+      "id": "resume_missing",
+      "covers": ["preflight"],
+      "given": "对话和授权工作区中没有有效简历",
+      "when": "用户要求开始模拟面试",
+      "expected_public": ["原样要求上传简历或提供路径", "停止前置流程"],
+      "forbidden_public": ["提出通用面试题", "声称已经读取简历"],
+      "expected_state": ["phase 保持 preflight", "不创建主题和证据"]
+    },
+    {
+      "id": "multiple_resumes",
+      "covers": ["preflight"],
+      "given": "发现两份无法自动区分的候选简历",
+      "when": "需要选择面试材料",
+      "expected_public": ["列出候选简历并要求用户选择"],
+      "forbidden_public": ["擅自选择其中一份"],
+      "expected_state": ["phase 保持 preflight"]
+    },
+    {
+      "id": "config_missing",
+      "covers": ["configuration"],
+      "given": "简历和目标职位有效，但面试形式会影响执行且尚未确定",
+      "when": "进入配置阶段",
+      "expected_public": ["展示相关默认选项", "等待用户确认"],
+      "forbidden_public": ["在确认前提出面试题"],
+      "expected_state": ["phase 为 configuring"]
+    },
+    {
+      "id": "skip_main_question",
+      "covers": ["control", "topic_state"],
+      "given": "当前主题刚提出主问题且尚无证据",
+      "when": "用户回复跳过",
+      "expected_public": ["自然提出另一个问题"],
+      "forbidden_public": ["展示主题编号", "解释内部计数"],
+      "expected_state": ["原主题为 skipped", "原主题不计入 covered"]
+    },
+    {
+      "id": "pause_resume",
+      "covers": ["control", "state_transition"],
+      "given": "正式面试正在某主题，已经提出主问题并完成 2 次追问",
+      "when": "用户暂停、讨论流程后继续",
+      "expected_public": ["暂停时退出面试官角色", "继续时恢复原面试"],
+      "forbidden_public": ["重复开始条", "把暂停讨论写成评分证据"],
+      "expected_state": ["interviewing -> paused -> interviewing", "main_question_id 和 follow_up_count=2 保持不变"]
+    },
+    {
+      "id": "pressure_adjustment",
+      "covers": ["control", "configuration", "pressure_depth"],
+      "given": "正式面试正在进行",
+      "when": "用户要求将压力调整到 120",
+      "expected_public": ["将压力限制为 100 并简短确认"],
+      "forbidden_public": ["辱骂或羞辱", "突破单主题 6 次追问"],
+      "expected_state": ["control_history 记录旧值和新值", "非岗位核心主题的 target_follow_up_range 不因压力自动扩大", "pressure_depth_bias 保持 none"]
+    },
+    {
+      "id": "coach_evidence",
+      "covers": ["coaching", "evidence"],
+      "given": "教练模式中面试官给出提示",
+      "when": "候选人根据提示重新回答",
+      "expected_public": ["继续自然面试或给出约定的简短反馈"],
+      "forbidden_public": ["将提示内容当成候选人独立能力"],
+      "expected_state": ["coach_interventions 新增记录", "后续证据 origin 为 coached"]
+    },
+    {
+      "id": "end_without_evidence",
+      "covers": ["early_end", "scoring"],
+      "given": "已经输出开始条但尚无可评分回答",
+      "when": "用户要求结束面试",
+      "expected_public": ["输出结束条", "总分显示证据不足", "推荐为待定或不建议"],
+      "forbidden_public": ["输出数字 0 分", "给出建议或强烈建议"],
+      "expected_state": ["completion.status 为 insufficient_evidence", "phase 进入 evaluating"]
+    },
+    {
+      "id": "combined_interview",
+      "covers": ["configuration", "combination"],
+      "given": "用户要求经理二面、系统设计、压力风格",
+      "when": "生成本轮配置",
+      "expected_public": ["阶段为二面", "角色为经理", "形式为系统设计", "风格为压力面试"],
+      "forbidden_public": ["将压力面试数量叠加到系统设计数量"],
+      "expected_state": ["config 四个配置轴分别保存"]
+    },
+    {
+      "id": "director_depth_profile",
+      "covers": ["dynamic_depth", "role_mapping"],
+      "given": "用户选择专业四面或总监面，当前主题涉及关键系统决策",
+      "when": "初始化主题深度",
+      "expected_public": ["正常提出与决策、资源、风险或长期影响有关的主问题"],
+      "forbidden_public": ["把总监面简单理解为重复追问更多局部技术细节"],
+      "expected_state": ["depth_profile 为 deep", "target_follow_up_range 为 4～5", "depth_reasons 记录总监角色和关键决策"]
+    },
+    {
+      "id": "follow_up_limit",
+      "covers": ["topic_state", "follow_up_limit"],
+      "given": "同一主题已经提出主问题并完成第 6 次追问的回答",
+      "when": "仍存在可追问内容或未解决矛盾",
+      "expected_public": ["自然切换主题或结束面试"],
+      "forbidden_public": ["提出该主题第 7 次追问"],
+      "expected_state": ["主题状态为 completed", "follow_up_count 保持 6", "completion_reason 记录 follow_up_limit"]
+    },
+    {
+      "id": "contradiction_triage",
+      "covers": ["contradiction"],
+      "given": "候选人先说负责整体方案，后说核心架构由负责人决定",
+      "when": "现有上下文不足以判断责任边界",
+      "expected_public": ["中立询问候选人负责决策的具体范围"],
+      "forbidden_public": ["直接指控造假", "未澄清就写入诚信风险"],
+      "expected_state": ["classification 为 missing_context", "status 初始为 open"]
+    },
+    {
+      "id": "report_consent",
+      "covers": ["report_authorization"],
+      "given": "评价已经完成并询问是否生成报告",
+      "when": "用户拒绝或回答含糊",
+      "expected_public": ["不生成报告"],
+      "forbidden_public": ["创建或修改报告文件", "声称已永久保存"],
+      "expected_state": ["phase 进入 completed 而非 archived"]
+    },
+    {
+      "id": "evidence_gap_selection",
+      "covers": ["evidence_gap", "question_selection", "dynamic_depth"],
+      "given": "当前主题已完成 3 次追问，mechanism 已 sufficient，edge_cases 为 missing",
+      "when": "选择下一问",
+      "expected_public": ["提出第 4 次追问，且是针对异常或边界的单一问题"],
+      "forbidden_public": ["仅因为已经能够评分而结束主题", "重复询问已经充分的机制"],
+      "expected_state": ["下一问题 kind 为 follow_up", "follow_up_index 为 4", "target_slots 包含 edge_cases"]
+    },
+    {
+      "id": "soft_minimum_completion",
+      "covers": ["dynamic_depth", "soft_minimum"],
+      "given": "主题建议范围为 3～4 次追问，但完成 2 次追问后所有高价值槽位均已有高置信度独立证据",
+      "when": "决定是否继续深挖",
+      "expected_public": ["自然完成当前主题并转向下一主题或结束"],
+      "forbidden_public": ["只为达到建议下限而提出低价值问题"],
+      "expected_state": ["主题状态为 completed", "completion_reason 记录 evidence_sufficient", "follow_up_count 保持 2"]
+    },
+    {
+      "id": "question_quality_gate",
+      "covers": ["question_quality"],
+      "given": "候选问题包含多个子问题并暗示幂等和重试答案",
+      "when": "问题进入输出前质量门",
+      "expected_public": ["只输出改写后的单一非诱导问题"],
+      "forbidden_public": ["输出原始低质量问题", "展示质量检查过程"],
+      "expected_state": ["question_history.quality_gate 为 passed"]
+    },
+    {
+      "id": "opening_closing_state",
+      "covers": ["opening_closing", "state_transition", "evidence"],
+      "given": "专业面包含自我介绍开场，且有职位描述支持收尾问答",
+      "when": "记录开场回答并完成候选人提问环节",
+      "expected_public": ["开场邀请候选人自我介绍", "主题完成后邀请候选人提问"],
+      "forbidden_public": ["把开场或收尾计入主题数量", "把收尾问答写成评分证据"],
+      "expected_state": ["开场问题 kind 为 opening 且 topic_id 为 null", "收尾问题 kind 为 closing 且 topic_id 为 null", "开场可关联冻结维度证据"]
+    },
+    {
+      "id": "blueprint_remains_frozen",
+      "covers": ["blueprint_freeze", "control", "configuration"],
+      "given": "正式面试已经开始且评分蓝图已冻结",
+      "when": "用户调整压力、重点或覆盖数量",
+      "expected_public": ["按新要求调整后续面试范围或风格"],
+      "forbidden_public": ["修改评分维度或权重", "静默替换评分蓝图"],
+      "expected_state": ["score_blueprint.dimensions 保持不变", "control_history 记录配置变更"]
+    },
+    {
+      "id": "report_consent_reopened",
+      "covers": ["report_reauthorization", "report_authorization", "state_transition"],
+      "given": "用户先拒绝报告，phase 已为 completed，且本轮证据和评价仍可可靠恢复",
+      "when": "用户随后明确要求生成本轮报告",
+      "expected_public": ["按既有评价生成报告"],
+      "forbidden_public": ["补写无法恢复的证据", "要求重新进行整场面试"],
+      "expected_state": ["completed -> report_pending -> archived"]
+    },
+    {
+      "id": "confirmed_scope_cap",
+      "covers": ["scope_cap", "configuration", "topic_state"],
+      "given": "用户确认专业面覆盖 5 个主题",
+      "when": "5 个主题已覆盖，仍存在可继续提问的候选主题",
+      "expected_public": ["完成适用收尾后结束面试"],
+      "forbidden_public": ["未经确认开始第 6 个覆盖主题"],
+      "expected_state": ["covered 主题数量不超过 confirmed_coverage_limit"]
+    },
+    {
+      "id": "partial_coverage_score",
+      "covers": ["partial_coverage", "scoring"],
+      "given": "至少一个冻结维度有数字得分，但评分覆盖率低于 60%",
+      "when": "生成本轮评价",
+      "expected_public": ["按已评分维度给出暂定数字总分", "披露低覆盖率和可信度限制", "推荐最高为待定"],
+      "forbidden_public": ["把未评分维度按 0 分计算", "给出建议或强烈建议"],
+      "expected_state": ["total_score 按已评分维度重新归一化", "scored_weight 大于 0"]
+    }
+  ]
+}
