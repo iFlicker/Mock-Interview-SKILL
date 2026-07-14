@@ -48,7 +48,7 @@ python3 scripts/generate_report.py \
 ```bash
 python3 scripts/generate_report.py \
   --input /path/to/report-payload.json \
-  --output /path/to/interview-records/2026-07-06-后端开发-专业二面.html
+  --output /path/to/interview-records/2026-07-06-高级产品经理-经理面.html
 ```
 
 仅在用户明确要求覆盖已有报告时使用：
@@ -216,35 +216,35 @@ python3 scripts/generate_report.py \
 {
   "schema_version": "mock-interview-report/2.0",
   "interview_date": "2026-07-06",
-  "target_position": "后端开发工程师",
-  "interview_round": "专业二面",
+  "target_position": "高级产品经理",
+  "interview_round": "经理面",
   "candidate_type": "社招候选人",
   "interview_language": "中文",
-  "interviewer_style": "严谨、重视细节",
-  "pressure_value": 55,
+  "interviewer_style": "直接、关注结果",
+  "pressure_value": 65,
   "scope_control": "6 个主题",
   "feedback_mode": "纯模拟",
   "completion_status": "completed",
-  "resume_summary": "最近三年负责交易链路服务治理和稳定性优化。",
-  "jd_summary": "负责高并发交易系统的设计与优化。",
+  "resume_summary": "最近三年负责用户增长产品和新用户激活策略。",
+  "jd_summary": "负责增长机会识别、产品决策和跨部门落地。",
   "topics": [
     {
-      "title": "缓存一致性",
+      "title": "新用户激活策略",
       "qa_pairs": [
         {
-          "question": "你如何处理缓存与数据库双写一致性？",
-          "answer": "我会按写路径拆分失效时机，并补偿异常重试。"
+          "question": "你如何判断新引导流程确实提升了激活率？",
+          "answer": "我对比了上线前后的激活率，并跟踪了关键步骤的转化。"
         }
       ],
-      "observation": "能回答主流程，但对极端失败场景展开不够。"
+      "observation": "能说明核心指标和转化漏斗，但没有建立可靠的对照或排除同期活动影响。"
     }
   ],
   "dimensions": [
     {
-      "name": "专业深度",
+      "name": "问题分析与解决",
       "weight": "60%",
       "score": 78,
-      "evidence": "能解释主要一致性策略与风险点。"
+      "evidence": "能定义激活指标并拆解关键转化环节。"
     },
     {
       "name": "业务结果",
@@ -255,42 +255,42 @@ python3 scripts/generate_report.py \
   ],
   "total_score": 78,
   "scored_weight": 60,
-  "score_coverage_note": "专业深度已评分；业务结果证据不足，结论可信度有限。",
-  "covered_topics": ["缓存一致性"],
-  "strengths": ["能说明主链路设计和异常补偿思路。"],
+  "score_coverage_note": "问题分析与解决已评分；业务结果证据不足，结论可信度有限。",
+  "covered_topics": ["新用户激活策略"],
+  "strengths": ["能定义激活指标并拆解关键转化环节。"],
   "issues": [
     {
       "type": "知识缺口",
-      "evidence": "极端失败场景回答不够具体。",
-      "impact": "下一轮可能继续验证异常路径和边界处理能力。"
+      "evidence": "只比较上线前后数据，没有说明对照组或混杂因素处理。",
+      "impact": "无法可靠判断指标提升是否由新引导流程带来。"
     },
     {
       "type": "证据不足",
-      "evidence": "没有给出稳定性优化后的结果指标。",
+      "evidence": "没有给出实验持续时间、样本规模或分群结果。",
       "impact": "削弱了业务结果和个人贡献的可信度。"
     }
   ],
   "action_items": [
     {
       "priority": "P0",
-      "target": "缓存与数据库双写一致性问题",
-      "action": "补充异常路径、补偿机制、监控指标和一次真实故障复盘。",
-      "better_approach": "按正常路径、异常路径、补偿机制和监控指标分层回答。"
+      "target": "新引导流程的效果归因",
+      "action": "补充实验假设、对照方案、核心指标、护栏指标和干扰因素处理。",
+      "better_approach": "按目标、假设、实验设计、结果、干扰因素和决策影响组织回答。"
     }
   ],
   "knowledge_corrections": [
     {
       "severity": "核心缺口",
-      "topic": "缓存与数据库一致性",
-      "observed_issue": "回答了缓存失效主流程，但没有说明并发写、失败补偿和一致性边界。",
-      "correct_understanding": "这类问题通常不是追求绝对强一致，而是先判断业务能否接受短暂不一致，再通过更新数据库后删除缓存、失败重试、消息补偿、幂等处理和监控告警，把不一致窗口控制在可接受范围内。延迟双删可以降低部分并发读写造成脏缓存的概率，但不是银弹，仍要结合业务一致性要求和异常补偿设计。",
-      "better_interview_answer": "先说明一致性目标，再拆正常路径、异常路径、补偿机制、监控指标和取舍边界。",
-      "learning_entry": ["缓存失效策略", "最终一致性", "幂等重试", "消息可靠投递"]
+      "topic": "实验设计与效果归因",
+      "observed_issue": "只比较了上线前后指标，没有说明对照组、样本分配和混杂因素。",
+      "correct_understanding": "前后指标变化只能说明相关性。更可靠的归因需要先定义假设、核心指标和护栏指标，再通过随机对照或合理的准实验方法降低同期活动、用户结构和季节变化等因素的影响，同时检查样本量、实验周期和分群差异。",
+      "better_interview_answer": "先说明业务假设和指标口径，再介绍对照方案、样本与周期、干扰因素、实验结果和最终决策。",
+      "learning_entry": ["实验设计", "因果推断", "指标口径", "护栏指标"]
     }
   ],
   "recommendation": "建议",
-  "recommendation_reason": "基础扎实，但还需要更多结果证据。",
-  "next_round_focus": "验证高并发写入场景下的边界处理。"
+  "recommendation_reason": "分析框架较完整，但还需要更可靠的效果归因证据。",
+  "next_round_focus": "验证实验设计、业务取舍和跨部门推进能力。"
 }
 ```
 

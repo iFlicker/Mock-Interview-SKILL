@@ -85,10 +85,10 @@
     {
       "id": "director_depth_profile",
       "covers": ["dynamic_depth", "role_mapping"],
-      "given": "用户选择专业四面或总监面，当前主题涉及关键系统决策",
+      "given": "用户选择专业四面或总监面，当前主题涉及关键业务或系统决策",
       "when": "初始化主题深度",
       "expected_public": ["正常提出与决策、资源、风险或长期影响有关的主问题"],
-      "forbidden_public": ["把总监面简单理解为重复追问更多局部技术细节"],
+      "forbidden_public": ["把总监面简单理解为重复追问更多局部执行细节"],
       "expected_state": ["depth_profile 为 deep", "target_follow_up_range 为 4～5", "depth_reasons 记录总监角色和关键决策"]
     },
     {
@@ -103,7 +103,7 @@
     {
       "id": "contradiction_triage",
       "covers": ["contradiction"],
-      "given": "候选人先说负责整体方案，后说核心架构由负责人决定",
+      "given": "候选人先说负责整体方案，后说关键方向由负责人决定",
       "when": "现有上下文不足以判断责任边界",
       "expected_public": ["中立询问候选人负责决策的具体范围"],
       "forbidden_public": ["直接指控造假", "未澄清就写入诚信风险"],
@@ -139,7 +139,7 @@
     {
       "id": "question_quality_gate",
       "covers": ["question_quality"],
-      "given": "候选问题包含多个子问题并暗示幂等和重试答案",
+      "given": "候选问题一次询问背景、方案、结果和复盘，并在问题中暗示先调研再试点的标准答案",
       "when": "问题进入输出前质量门",
       "expected_public": ["只输出改写后的单一非诱导问题"],
       "forbidden_public": ["输出原始低质量问题", "展示质量检查过程"],
@@ -189,6 +189,42 @@
       "expected_public": ["按已评分维度给出暂定数字总分", "披露低覆盖率和可信度限制", "推荐最高为待定"],
       "forbidden_public": ["把未评分维度按 0 分计算", "给出建议或强烈建议"],
       "expected_state": ["total_score 按已评分维度重新归一化", "scored_weight 大于 0"]
+    },
+    {
+      "id": "natural_answer_bridge",
+      "covers": ["answer_bridge", "question_quality", "interaction_state"],
+      "given": "候选人刚才明确说活动策略调整后转化率提升约 18%，但没有说明归因方法",
+      "when": "下一问需要验证结果归因",
+      "expected_public": ["简短承接候选人实际提到的 18% 结果", "只提出一个关于归因或验证的主要问题"],
+      "forbidden_public": ["补写候选人没有说过的验证结论", "机械使用无意义的好的或明白了", "在承接句中暗藏第二个问题"],
+      "expected_state": ["question_history.bridge_move 为 focus、reflect 或 reserve", "premise_ref_ids 关联 candidate_statement", "quality_gate 为 passed"]
+    },
+    {
+      "id": "challenge_move_gradient",
+      "covers": ["challenge_gradient", "question_selection", "interaction_state"],
+      "given": "同一主题起初背景和责任边界不清，后续已经形成可验证的候选方案",
+      "when": "连续选择追问动作",
+      "expected_public": ["先澄清或具体化必要背景", "背景建立后根据证据缺口使用取舍、验证、边界或约束变化中的合适动作"],
+      "forbidden_public": ["基础事实未明时直接构造复杂反事实", "连续轻微改写同一种挑战", "仅因压力值提高而升级挑战"],
+      "expected_state": ["question_history 记录 challenge_move 和匹配的 challenge_level", "连续挑战动作计数与历史一致"]
+    },
+    {
+      "id": "finite_interviewer_knowledge",
+      "covers": ["limited_knowledge", "question_quality", "interaction_state"],
+      "given": "简历只写明项目最后放弃了原方案，没有提供成本、团队意图或决策背景",
+      "when": "面试官追问放弃原方案的原因",
+      "expected_public": ["把材料作为待核实背景并中立询问主要限制", "若使用推断则明确表达为待确认理解"],
+      "forbidden_public": ["断言是因为成本压力", "虚构团队内部数据或真实结果", "故意设置错误专业前提"],
+      "expected_state": ["问题前提关联 provided_material", "interviewer_inference 仅在校准表达下使用", "unknown 未作为既定事实输出"]
+    },
+    {
+      "id": "non_technical_role_defaults",
+      "covers": ["domain_generality", "configuration", "question_selection"],
+      "given": "目标职位是区域运营经理，用户选择经理角色的综合专业面，没有要求技术专项",
+      "when": "生成配置并选择专业主题和问题",
+      "expected_public": ["围绕经营诊断、资源取舍、业务结果和跨部门协作等岗位相关能力", "使用运营岗位能够自然回答的专业问题"],
+      "forbidden_public": ["默认加入编程或算法任务", "询问系统架构或程序员专属知识", "把专业面解释为技术面"],
+      "expected_state": ["config.interview_format 为综合专业", "主题来源与目标职位和评分蓝图相关", "special_sections 不自动包含编程或系统设计"]
     }
   ]
 }

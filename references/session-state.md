@@ -6,7 +6,7 @@
 
 ## Schema 版本
 
-- 当前会话状态版本：`mock-interview-session/3.1`。本版本增加独立的开场和收尾问题类型、跳过替代预算及已完成会话重新授权报告的转换。
+- 当前会话状态版本：`mock-interview-session/3.2`。本版本增加承接动作、挑战动作及面试官认知来源的交互状态；继续保留独立开场和收尾、跳过替代预算及报告重新授权转换。
 - `schema_version` 必填。字段语义发生不兼容变化时升级主版本；只增加可选字段时升级次版本。
 - 会话状态版本与报告 payload 版本相互独立。报告版本由 `archive-format.md` 定义。
 
@@ -14,12 +14,13 @@
 
 ```json
 {
-  "schema_version": "mock-interview-session/3.1",
+  "schema_version": "mock-interview-session/3.2",
   "phase": "interviewing",
   "config": {},
   "score_blueprint": {},
   "topics": [],
   "current_topic_id": null,
+  "interaction_state": {},
   "question_history": [],
   "evidence_ledger": [],
   "contradictions": [],
@@ -28,6 +29,36 @@
   "completion": null
 }
 ```
+
+## 交互状态
+
+`interaction_state` 用于保持逐轮对话自然、挑战动作有变化，并校准面试官知道什么。它不改变评分蓝图，也不得直接作为评分证据。
+
+```json
+{
+  "last_answer_question_id": "q-2",
+  "last_answer_summary": "候选人称活动策略调整后转化率提升约 18%，但尚未说明归因方法。",
+  "last_bridge_move": "focus",
+  "consecutive_bridge_move_count": 1,
+  "last_challenge_move": "test_evidence",
+  "consecutive_challenge_move_count": 1,
+  "knowledge_refs": [
+    {
+      "id": "kr-1",
+      "source": "candidate_statement",
+      "source_id": "q-2",
+      "content": "活动策略调整后转化率提升约 18%"
+    }
+  ]
+}
+```
+
+- `last_answer_summary` 只能做最小必要转述，不能比原回答更完整或更有利；无法可靠概括时为 `null`；
+- `last_bridge_move` 只能是 `acknowledge`、`reflect`、`focus`、`reserve`、`bridge` 或 `none`；相同动作连续出现时递增计数，动作变化时重置为 1，使用 `none` 时计数重置为 0；
+- `last_challenge_move` 只能是 `clarify`、`specify`、`explain`、`compare`、`test_evidence`、`probe_boundary`、`change_constraint`、`defend_decision` 或 `none`；
+- `knowledge_refs.source` 只能是 `provided_material`、`candidate_statement`、`general_knowledge`、`interviewer_inference` 或 `unknown`；引用材料或回答时填写 `source_id`，通用知识、推断和未知信息可以为 `null`；
+- `interviewer_inference` 只有在问题中使用校准表达时才能作为前提；`unknown` 只能触发背景澄清，不能被陈述为事实；
+- 交互状态只保留生成自然下一问所需的最小信息。候选人的完整原始证据仍以 `evidence_ledger` 为准，不得用本节替代证据账本。
 
 ## 阶段 `phase`
 
@@ -73,7 +104,7 @@ completed -> report_pending
 ```json
 {
   "id": "topic-1",
-  "title": "缓存一致性",
+  "title": "项目成效归因",
   "status": "covered",
   "main_question_id": "q-1",
   "follow_up_count": 2,
@@ -81,7 +112,7 @@ completed -> report_pending
   "target_follow_up_range": {"min": 3, "max": 4},
   "depth_reasons": ["专业二面", "岗位核心主题"],
   "pressure_depth_bias": "none",
-  "dimension_ids": ["professional_depth"],
+  "dimension_ids": ["problem_solving"],
   "evidence_slots": {
     "mechanism": "sufficient",
     "edge_cases": "weak",
@@ -115,14 +146,25 @@ completed -> report_pending
   "topic_id": "topic-1",
   "kind": "follow_up",
   "follow_up_index": 2,
-  "target_slots": ["edge_cases"],
-  "text": "如果删除缓存失败，你会怎样处理？",
+  "target_slots": ["validation"],
+  "bridge_move": "focus",
+  "challenge_move": "test_evidence",
+  "challenge_level": 4,
+  "premise_ref_ids": ["kr-1"],
+  "text": "当时怎么判断这次策略调整和指标变化之间的因果关系？",
   "quality_gate": "passed",
   "answer_status": "answered"
 }
 ```
 
 `kind` 只能是 `opening`、`main`、`follow_up` 或 `closing`。`opening` 和 `closing` 的 `topic_id`、`follow_up_index` 均为 `null`；每轮最多各一个。每个主题只能有一个 `main`；主问题的 `follow_up_index` 为 `null`。追问的 `follow_up_index` 从 1 连续递增，并且必须等于该问题提出后主题的 `follow_up_count`。`quality_gate` 必须为 `passed`；未通过质量门的问题不得输出。`answer_status` 可以是 `answered`、`short`、`off_topic`、`skipped` 或 `unanswered`。
+
+`bridge_move`、`challenge_move`、`challenge_level` 和 `premise_ref_ids` 记录本轮如何承接、如何挑战以及问题前提来自哪里：
+
+- 不需要承接或挑战时分别使用 `none`，`challenge_level` 也为 `null`；
+- `challenge_level` 必须与 `interview-policy.md` 的挑战动作梯度一致；
+- `premise_ref_ids` 引用 `interaction_state.knowledge_refs`；只使用公开通用知识且无需具体前提时可以为空；
+- 承接动作和挑战动作不得改变一个问题只含一个主要问题的要求。
 
 专业面自我介绍使用 `opening`。它不计入主题数量，但回答可以在确有评分价值时生成证据。基于职位描述的候选人提问环节使用 `closing`，只记录真实问答，不生成评分证据。
 
@@ -135,11 +177,11 @@ completed -> report_pending
   "id": "ev-4",
   "question_id": "q-3",
   "topic_id": "topic-1",
-  "dimension_ids": ["professional_depth"],
-  "slot": "edge_cases",
+  "dimension_ids": ["problem_solving"],
+  "slot": "validation",
   "origin": "independent",
   "representation": "paraphrase",
-  "content": "候选人提出失败重试和告警，但没有说明幂等边界。",
+  "content": "候选人说明对比了调整前后的同口径数据，但没有设置对照组或排除同期活动影响。",
   "signal": "partial",
   "confidence": "medium"
 }
@@ -188,3 +230,5 @@ completed -> report_pending
 6. 暂停期间不新增正式问题和评分证据；
 7. 输出结束条后不得再新增面试问题；
 8. 未获授权时不得从会话状态生成或写入报告文件。
+9. 每个正式问题使用的具体事实前提都必须能关联 `knowledge_refs`；`interviewer_inference` 必须经校准表达，`unknown` 不得被输出为既定事实；
+10. 承接动作与挑战动作必须写入问题历史；连续动作计数与历史一致，且任何动作都不能绕过问题质量门或增加第二个主要问题。

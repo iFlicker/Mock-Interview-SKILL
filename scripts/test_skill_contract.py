@@ -9,6 +9,8 @@ SKILL_PATH = ROOT / "SKILL.md"
 POLICY_PATH = ROOT / "references" / "interview-policy.md"
 STATE_PATH = ROOT / "references" / "session-state.md"
 SCENARIOS_PATH = ROOT / "references" / "behavior-scenarios.md"
+ARCHIVE_PATH = ROOT / "references" / "archive-format.md"
+README_PATH = ROOT / "README.md"
 
 REQUIRED_SCENARIOS = {
     "resume_missing",
@@ -32,6 +34,10 @@ REQUIRED_SCENARIOS = {
     "report_consent_reopened",
     "confirmed_scope_cap",
     "partial_coverage_score",
+    "natural_answer_bridge",
+    "challenge_move_gradient",
+    "finite_interviewer_knowledge",
+    "non_technical_role_defaults",
 }
 
 REQUIRED_COVERAGE = {
@@ -60,6 +66,11 @@ REQUIRED_COVERAGE = {
     "report_reauthorization",
     "scope_cap",
     "partial_coverage",
+    "answer_bridge",
+    "challenge_gradient",
+    "limited_knowledge",
+    "interaction_state",
+    "domain_generality",
 }
 
 
@@ -121,11 +132,14 @@ class SkillContractTest(unittest.TestCase):
 
         policy = POLICY_PATH.read_text(encoding="utf-8")
         self.assertIn("## 证据缺口驱动提问", policy)
+        self.assertIn("## 承接上一回答", policy)
+        self.assertIn("## 挑战动作梯度", policy)
+        self.assertIn("## 面试官有限认知", policy)
         self.assertIn("## 问题质量门", policy)
         self.assertIn("## 矛盾分级", policy)
 
         state = STATE_PATH.read_text(encoding="utf-8")
-        self.assertIn('"schema_version": "mock-interview-session/3.1"', state)
+        self.assertIn('"schema_version": "mock-interview-session/3.2"', state)
         self.assertIn('"main_question_id": "q-1"', state)
         self.assertIn('"follow_up_count": 2', state)
         self.assertIn('"depth_profile": "standard"', state)
@@ -133,6 +147,33 @@ class SkillContractTest(unittest.TestCase):
         self.assertNotIn('"round_count"', state)
         self.assertIn("## 不变量", state)
         self.assertIn("interviewing <-> paused", state)
+        self.assertIn("## 交互状态", state)
+        self.assertIn('"bridge_move": "focus"', state)
+        self.assertIn('"challenge_move": "test_evidence"', state)
+        self.assertIn('"source": "candidate_statement"', state)
+
+    def test_generic_examples_are_not_anchored_to_programmer_interviews(self):
+        generic_docs = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (POLICY_PATH, STATE_PATH, ARCHIVE_PATH)
+        )
+        programmer_example_markers = (
+            "Kafka",
+            "缓存一致性",
+            "消息队列",
+            "幂等重试",
+            "微服务",
+            "后端开发工程师",
+        )
+        for marker in programmer_example_markers:
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, generic_docs)
+
+        readme = README_PATH.read_text(encoding="utf-8")
+        for role in ("高级产品经理", "区域运营经理", "大客户销售经理"):
+            with self.subTest(role=role):
+                self.assertIn(role, readme)
+        self.assertIn("技术专项面试", readme)
 
 
 if __name__ == "__main__":

@@ -191,33 +191,33 @@ class GenerateReportTest(unittest.TestCase):
         payload = {
             "schema_version": "mock-interview-report/2.0",
             "interview_date": "2026-07-06",
-            "target_position": "后端开发工程师",
-            "interview_round": "专业二面",
+            "target_position": "高级产品经理",
+            "interview_round": "经理面",
             "candidate_type": "社招候选人",
             "interview_language": "中文",
-            "interviewer_style": "严谨、重视细节",
-            "pressure_value": 55,
+            "interviewer_style": "直接、关注结果",
+            "pressure_value": 65,
             "scope_control": "1 个主题",
             "feedback_mode": "纯模拟",
-            "resume_summary": "负责交易链路服务治理。",
+            "resume_summary": "负责用户增长产品和新用户激活策略。",
             "topics": [
                 {
-                    "title": "缓存一致性",
+                    "title": "新用户激活策略",
                     "qa_pairs": [
                         {
-                            "question": "你如何处理缓存与数据库双写一致性？",
-                            "answer": "我会删除缓存。",
+                            "question": "你如何判断新引导流程确实提升了激活率？",
+                            "answer": "我对比了上线前后的激活率。",
                         }
                     ],
-                    "observation": "回答过于简略，缺少异常路径。",
+                    "observation": "回答过于简略，缺少对照设计和干扰因素处理。",
                 }
             ],
             "dimensions": [
                 {
-                    "name": "专业深度",
+                    "name": "问题分析与解决",
                     "weight": "100%",
                     "score": 62,
-                    "evidence": "能说出基础策略，但缺少并发和补偿机制。",
+                    "evidence": "能说出基础指标，但缺少可靠的效果归因方法。",
                 }
             ],
             "completion_status": "completed",
@@ -225,40 +225,40 @@ class GenerateReportTest(unittest.TestCase):
             "scored_weight": 100,
             "score_coverage_note": "覆盖了 1 个核心主题。",
             "recommendation": "待定",
-            "recommendation_reason": "基础方向正确，但关键机制缺失。",
-            "next_round_focus": "继续验证一致性边界和异常补偿。",
-            "strengths": ["知道缓存失效是一个可选方向。"],
+            "recommendation_reason": "基础方向正确，但实验设计和效果归因仍有缺口。",
+            "next_round_focus": "继续验证实验设计、业务取舍和跨部门推进。",
+            "strengths": ["知道先定义并观察核心激活指标。"],
             "issues": [
                 {
                     "type": "知识缺口",
-                    "evidence": "没有解释并发写和失败补偿。",
-                    "impact": "影响高并发场景下的方案可信度。",
+                    "evidence": "只比较上线前后指标，没有说明对照组或混杂因素处理。",
+                    "impact": "无法可靠判断指标变化是否由新引导流程带来。",
                 }
             ],
             "action_items": [
                 {
                     "priority": "P0",
-                    "target": "缓存一致性",
-                    "action": "补充异常路径和补偿机制。",
-                    "better_approach": "按目标、路径、异常、监控回答。",
+                    "target": "新引导流程的效果归因",
+                    "action": "补充实验假设、对照方案、核心指标和干扰因素处理。",
+                    "better_approach": "按目标、假设、实验设计、结果和决策影响回答。",
                 }
             ],
             "knowledge_corrections": [
                 {
                     "severity": "核心缺口",
-                    "topic": "缓存与数据库一致性",
-                    "observed_issue": "只回答了删除缓存，没有解释并发写、失败补偿和一致性边界。",
-                    "correct_understanding": "这类问题通常不是追求绝对强一致，而是先判断业务能否接受短暂不一致，再通过更新数据库后删除缓存、失败重试、消息补偿、幂等处理和监控告警，把不一致窗口控制在可接受范围内。",
-                    "better_interview_answer": "先说明一致性目标，再拆正常路径、异常路径、补偿机制、监控指标和取舍边界。",
-                    "learning_entry": ["缓存失效策略", "最终一致性", "幂等重试"],
+                    "topic": "实验设计与效果归因",
+                    "observed_issue": "只比较上线前后指标，没有说明对照组、样本分配和混杂因素。",
+                    "correct_understanding": "前后指标变化只能说明相关性。更可靠的归因需要先定义假设和指标，再通过随机对照或合理的准实验方法降低同期活动、用户结构和季节变化等因素的影响。",
+                    "better_interview_answer": "先说明业务假设和指标口径，再介绍对照方案、样本与周期、干扰因素、实验结果和最终决策。",
+                    "learning_entry": ["实验设计", "因果推断", "指标口径"],
                 },
                 {
                     "severity": "一般缺口",
-                    "topic": "延迟双删",
-                    "observed_issue": "没有说明延迟双删的适用前提。",
-                    "correct_understanding": "延迟双删用于降低部分并发读写导致脏缓存的概率，但不能替代补偿、监控和业务侧一致性判断。",
-                    "better_interview_answer": "说明它解决的问题、不能解决的问题和替代方案。",
-                    "learning_entry": "缓存并发读写、脏缓存",
+                    "topic": "护栏指标",
+                    "observed_issue": "只关注激活率，没有说明如何防止短期转化提升损害留存或投诉率。",
+                    "correct_understanding": "实验不能只观察目标指标，还要设置留存、投诉、退出率或体验质量等护栏指标，避免局部优化掩盖长期或外溢损害。",
+                    "better_interview_answer": "说明核心指标之外还监控哪些护栏指标，以及触发什么条件会停止或回滚方案。",
+                    "learning_entry": "护栏指标、局部最优",
                 },
             ],
             "generated_at": "2026-07-06 10:00:00 +08:00",
@@ -300,30 +300,30 @@ class GenerateReportTest(unittest.TestCase):
             self.assertIn('<details class="kc-item" open>', report)
             self.assertIn("全部展开", report)
             self.assertIn("全部收起", report)
-            self.assertIn("缓存与数据库一致性", report)
-            self.assertIn("这类问题通常不是追求绝对强一致", report)
-            self.assertIn('<span class="kc-tag">缓存失效策略</span>', report)
-            self.assertIn('<span class="kc-tag">最终一致性</span>', report)
-            self.assertIn('<span class="kc-tag">幂等重试</span>', report)
+            self.assertIn("实验设计与效果归因", report)
+            self.assertIn("前后指标变化只能说明相关性", report)
+            self.assertIn('<span class="kc-tag">实验设计</span>', report)
+            self.assertIn('<span class="kc-tag">因果推断</span>', report)
+            self.assertIn('<span class="kc-tag">指标口径</span>', report)
 
     def test_generate_report_supports_insufficient_evidence_without_numeric_score(self):
         payload = {
             "schema_version": "mock-interview-report/2.0",
             "interview_date": "2026-07-11",
-            "target_position": "后端开发工程师",
-            "interview_round": "专业二面",
+            "target_position": "财务分析师",
+            "interview_round": "专业一面",
             "candidate_type": "社招候选人",
             "interview_language": "中文",
             "interviewer_style": "严谨",
             "pressure_value": 55,
             "scope_control": "6 个主题",
             "feedback_mode": "纯模拟",
-            "resume_summary": "负责后端服务治理。",
+            "resume_summary": "负责经营分析和预算跟踪。",
             "completion_status": "insufficient_evidence",
             "topics": [],
             "dimensions": [
                 {
-                    "name": "专业深度",
+                    "name": "专业基础",
                     "weight": "60%",
                     "score": None,
                     "evidence": "证据不足：尚未取得有效回答。",
@@ -340,7 +340,7 @@ class GenerateReportTest(unittest.TestCase):
             "score_coverage_note": "面试在取得有效回答前结束，无法计算总分。",
             "recommendation": "待定",
             "recommendation_reason": "没有足够证据支持招聘建议。",
-            "next_round_focus": "重新完成专业能力和问题解决能力考察。",
+            "next_round_focus": "重新完成财务分析能力和问题解决能力考察。",
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -375,19 +375,19 @@ class GenerateReportTest(unittest.TestCase):
     def test_generate_report_rejects_invalid_dimension_weights(self):
         payload = {
             "interview_date": "2026-07-06",
-            "target_position": "后端开发工程师",
-            "interview_round": "专业二面",
+            "target_position": "区域运营经理",
+            "interview_round": "经理面",
             "candidate_type": "社招候选人",
             "interview_language": "中文",
             "interviewer_style": "严谨",
             "pressure_value": 55,
             "scope_control": "1 个主题",
             "feedback_mode": "纯模拟",
-            "resume_summary": "负责后端服务治理。",
+            "resume_summary": "负责区域门店经营和增长改善。",
             "topics": [
                 {
-                    "title": "稳定性",
-                    "qa_pairs": [{"question": "如何治理？", "answer": "分层治理。"}],
+                    "title": "门店增长诊断",
+                    "qa_pairs": [{"question": "你会如何定位增长放缓？", "answer": "我会分层分析。"}],
                     "observation": "证据有限。",
                 }
             ],
@@ -403,7 +403,7 @@ class GenerateReportTest(unittest.TestCase):
             "score_coverage": "覆盖有限。",
             "recommendation": "待定",
             "recommendation_reason": "仍需验证。",
-            "next_round_focus": "继续验证稳定性能力。",
+            "next_round_focus": "继续验证经营诊断和落地能力。",
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
