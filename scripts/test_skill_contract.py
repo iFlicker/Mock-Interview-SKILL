@@ -10,6 +10,10 @@ POLICY_PATH = ROOT / "references" / "interview-policy.md"
 STATE_PATH = ROOT / "references" / "session-state.md"
 SCENARIOS_PATH = ROOT / "references" / "behavior-scenarios.md"
 ARCHIVE_PATH = ROOT / "references" / "archive-format.md"
+MATRIX_PATH = ROOT / "references" / "interview-matrix.md"
+RUBRICS_PATH = ROOT / "references" / "scoring-rubrics.md"
+GENERATOR_PATH = ROOT / "scripts" / "generate_report.py"
+TEMPLATE_PATH = ROOT / "scripts" / "report-template.html"
 README_PATH = ROOT / "README.md"
 
 REQUIRED_SCENARIOS = {
@@ -19,7 +23,7 @@ REQUIRED_SCENARIOS = {
     "skip_main_question",
     "pause_resume",
     "pressure_adjustment",
-    "coach_evidence",
+    "immersive_feedback_boundary",
     "end_without_evidence",
     "combined_interview",
     "director_depth_profile",
@@ -45,7 +49,7 @@ REQUIRED_COVERAGE = {
     "configuration",
     "control",
     "state_transition",
-    "coaching",
+    "immersive_feedback",
     "evidence",
     "early_end",
     "scoring",
@@ -139,7 +143,7 @@ class SkillContractTest(unittest.TestCase):
         self.assertIn("## 矛盾分级", policy)
 
         state = STATE_PATH.read_text(encoding="utf-8")
-        self.assertIn('"schema_version": "mock-interview-session/3.2"', state)
+        self.assertIn('"schema_version": "mock-interview-session/4.0"', state)
         self.assertIn('"main_question_id": "q-1"', state)
         self.assertIn('"follow_up_count": 2', state)
         self.assertIn('"depth_profile": "standard"', state)
@@ -174,6 +178,30 @@ class SkillContractTest(unittest.TestCase):
             with self.subTest(role=role):
                 self.assertIn(role, readme)
         self.assertIn("技术专项面试", readme)
+
+    def test_runtime_contract_has_no_coaching_mode(self):
+        runtime_contract = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                SKILL_PATH,
+                POLICY_PATH,
+                STATE_PATH,
+                MATRIX_PATH,
+                RUBRICS_PATH,
+                GENERATOR_PATH,
+                TEMPLATE_PATH,
+            )
+        )
+        for marker in (
+            "教练模式",
+            "feedback_mode",
+            "coaching_note",
+            "evidence_origin",
+            "coach_interventions",
+            '"origin": "coached"',
+        ):
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, runtime_contract)
 
 
 if __name__ == "__main__":

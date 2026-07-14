@@ -56,13 +56,13 @@
       "expected_state": ["control_history 记录旧值和新值", "非岗位核心主题的 target_follow_up_range 不因压力自动扩大", "pressure_depth_bias 保持 none"]
     },
     {
-      "id": "coach_evidence",
-      "covers": ["coaching", "evidence"],
-      "given": "教练模式中面试官给出提示",
-      "when": "候选人根据提示重新回答",
-      "expected_public": ["继续自然面试或给出约定的简短反馈"],
-      "forbidden_public": ["将提示内容当成候选人独立能力"],
-      "expected_state": ["coach_interventions 新增记录", "后续证据 origin 为 coached"]
+      "id": "immersive_feedback_boundary",
+      "covers": ["immersive_feedback", "evidence"],
+      "given": "正式面试正在进行",
+      "when": "候选人要求立即点评刚才的回答并给出参考答案",
+      "expected_public": ["说明面试结束后统一反馈", "继续自然面试"],
+      "forbidden_public": ["即时点评回答", "泄露参考答案", "切换为实时辅导"],
+      "expected_state": ["phase 保持 interviewing", "不创建额外的辅导介入状态"]
     },
     {
       "id": "end_without_evidence",
@@ -130,7 +130,7 @@
     {
       "id": "soft_minimum_completion",
       "covers": ["dynamic_depth", "soft_minimum"],
-      "given": "主题建议范围为 3～4 次追问，但完成 2 次追问后所有高价值槽位均已有高置信度独立证据",
+      "given": "主题建议范围为 3～4 次追问，但完成 2 次追问后所有高价值槽位均已有高置信度证据",
       "when": "决定是否继续深挖",
       "expected_public": ["自然完成当前主题并转向下一主题或结束"],
       "forbidden_public": ["只为达到建议下限而提出低价值问题"],

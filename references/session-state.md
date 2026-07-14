@@ -6,7 +6,7 @@
 
 ## Schema 版本
 
-- 当前会话状态版本：`mock-interview-session/3.2`。本版本增加承接动作、挑战动作及面试官认知来源的交互状态；继续保留独立开场和收尾、跳过替代预算及报告重新授权转换。
+- 当前会话状态版本：`mock-interview-session/4.0`。本版本移除反馈模式、教练介入和提示后证据，正式面试统一采用沉浸式模拟；继续保留承接动作、挑战动作、面试官认知来源、独立开场和收尾、跳过替代预算及报告重新授权转换。
 - `schema_version` 必填。字段语义发生不兼容变化时升级主版本；只增加可选字段时升级次版本。
 - 会话状态版本与报告 payload 版本相互独立。报告版本由 `archive-format.md` 定义。
 
@@ -14,7 +14,7 @@
 
 ```json
 {
-  "schema_version": "mock-interview-session/3.2",
+  "schema_version": "mock-interview-session/4.0",
   "phase": "interviewing",
   "config": {},
   "score_blueprint": {},
@@ -24,7 +24,6 @@
   "question_history": [],
   "evidence_ledger": [],
   "contradictions": [],
-  "coach_interventions": [],
   "control_history": [],
   "completion": null
 }
@@ -91,7 +90,7 @@ completed -> report_pending
 
 ## 配置与评分蓝图
 
-`config` 保存用户确认后的配置快照，至少包含候选人类型、目标职位和职级、面试阶段、面试官角色、面试形式、范围、压力值、语言和反馈模式。
+`config` 保存用户确认后的配置快照，至少包含候选人类型、目标职位和职级、面试阶段、面试官角色、面试形式、范围、压力值和语言。
 
 `score_blueprint.dimensions` 保存冻结的维度及权重，面试开始后不得修改。中途的压力、重点、题目范围或覆盖数量调整只修改 `config` 和尚未开始的主题，并追加一条 `control_history` 记录旧值、新值和原因。目标职位或面试形式发生到足以使蓝图失效的变化时，不得在原会话中替换蓝图，应结束本轮并以新配置初始化新会话。
 
@@ -179,7 +178,6 @@ completed -> report_pending
   "topic_id": "topic-1",
   "dimension_ids": ["problem_solving"],
   "slot": "validation",
-  "origin": "independent",
   "representation": "paraphrase",
   "content": "候选人说明对比了调整前后的同口径数据，但没有设置对照组或排除同期活动影响。",
   "signal": "partial",
@@ -187,7 +185,6 @@ completed -> report_pending
 }
 ```
 
-- `origin`：`independent` 或 `coached`；
 - `representation`：`exact_quote` 或 `paraphrase`；无法可靠还原原话时只能使用 `paraphrase`；
 - `signal`：`positive`、`partial`、`negative` 或 `insufficient`；
 - `confidence`：`high`、`medium` 或 `low`；
@@ -225,10 +222,9 @@ completed -> report_pending
 1. `current_topic_id` 非空时只能有一个，且它指向 `started` 或 `covered` 的主题；开场、收尾、主题切换完成后的瞬间可以为 `null`；
 2. 每个主题只有一个主问题，主问题不计入追问次数；`target_follow_up_range` 合法且 `follow_up_count` 不超过其 `max` 和全局上限 6；已经完成或跳过的主题不能继续追加问题；
 3. 每条证据关联已存在的问题和冻结维度；除 `opening` 证据允许主题为空外，其他证据还必须关联已存在主题；`closing` 不得关联评分证据；
-4. `coached` 证据之前必须存在对应的 `coach_interventions`；
-5. 已解决矛盾不得继续作为负面评分依据；
-6. 暂停期间不新增正式问题和评分证据；
-7. 输出结束条后不得再新增面试问题；
-8. 未获授权时不得从会话状态生成或写入报告文件。
-9. 每个正式问题使用的具体事实前提都必须能关联 `knowledge_refs`；`interviewer_inference` 必须经校准表达，`unknown` 不得被输出为既定事实；
-10. 承接动作与挑战动作必须写入问题历史；连续动作计数与历史一致，且任何动作都不能绕过问题质量门或增加第二个主要问题。
+4. 已解决矛盾不得继续作为负面评分依据；
+5. 暂停期间不新增正式问题和评分证据；
+6. 输出结束条后不得再新增面试问题；
+7. 未获授权时不得从会话状态生成或写入报告文件。
+8. 每个正式问题使用的具体事实前提都必须能关联 `knowledge_refs`；`interviewer_inference` 必须经校准表达，`unknown` 不得被输出为既定事实；
+9. 承接动作与挑战动作必须写入问题历史；连续动作计数与历史一致，且任何动作都不能绕过问题质量门或增加第二个主要问题。

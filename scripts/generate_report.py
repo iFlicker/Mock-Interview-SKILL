@@ -9,9 +9,10 @@ from pathlib import Path
 
 
 TEMPLATE_PATH = Path(__file__).with_name("report-template.html")
-REPORT_SCHEMA_VERSION = "mock-interview-report/2.0"
+REPORT_SCHEMA_VERSION = "mock-interview-report/3.0"
 SUPPORTED_REPORT_SCHEMA_VERSIONS = {
     "mock-interview-report/1.0",
+    "mock-interview-report/2.0",
     REPORT_SCHEMA_VERSION,
 }
 
@@ -197,7 +198,6 @@ def validate_payload(payload):
             "interviewer_style",
             "pressure_value",
             "scope_control",
-            "feedback_mode",
             "resume_summary",
             "dimensions",
             "recommendation",
@@ -225,8 +225,6 @@ def validate_payload(payload):
 
     if payload["candidate_type"] not in {"实习生", "应届生", "社招候选人"}:
         raise ValueError("candidate_type must be 实习生、应届生 or 社招候选人.")
-    if payload["feedback_mode"] not in {"纯模拟", "教练模式"}:
-        raise ValueError("feedback_mode must be 纯模拟 or 教练模式.")
     if payload["recommendation"] not in RECOMMENDATION_STYLES:
         raise ValueError("recommendation must be 强烈建议、建议、待定 or 不建议.")
 
@@ -256,16 +254,6 @@ def validate_payload(payload):
                 ["question", "answer"],
                 f"{label}.qa_pairs[{qa_index}]",
             )
-            evidence_origin = qa_pair.get("evidence_origin")
-            if evidence_origin is not None and evidence_origin not in {
-                "independent",
-                "coached",
-            }:
-                raise ValueError(
-                    f"{label}.qa_pairs[{qa_index}].evidence_origin must be "
-                    "independent or coached."
-                )
-
     for optional_name, fields in {
         "opening": ["question", "answer"],
         "closing": ["question", "answer"],
@@ -711,14 +699,6 @@ def build_base_context(payload):
         "ended_early": "提前结束",
         "insufficient_evidence": "证据不足",
     }
-    coaching_note = payload.get("coaching_note")
-    if not coaching_note:
-        coaching_note = (
-            "本轮为纯模拟，评分依据候选人的独立回答。"
-            if payload["feedback_mode"] == "纯模拟"
-            else "本轮使用教练模式；未单独记录提示影响，评分可信度应谨慎理解。"
-        )
-
     generated_at = payload.get("generated_at")
     if not generated_at:
         generated_at = datetime.now().astimezone().isoformat(sep=" ", timespec="seconds")
@@ -741,7 +721,6 @@ def build_base_context(payload):
         "SCOPE_CONTROL": payload["scope_control"],
         "FOCUS_AREAS": payload.get("focus_areas", "未提供"),
         "SPECIAL_SECTIONS": payload.get("special_sections", "无"),
-        "FEEDBACK_MODE": payload["feedback_mode"],
         "QUESTION_BANK": payload.get("question_bank", "未使用"),
         "AVOIDED_TOPICS": payload.get("avoided_topics", "无"),
         "RESUME_SUMMARY": payload["resume_summary"],
@@ -753,7 +732,6 @@ def build_base_context(payload):
         "SCORE_BG_CLASS": total_style["bg_class"],
         "SCORED_WEIGHT": format_percentage(payload["scored_weight"]),
         "SCORE_COVERAGE": payload["score_coverage_note"],
-        "EVIDENCE_CONTEXT": coaching_note,
         "COVERED_TOPICS": covered_topics,
         "RECOMMENDATION_CLASS": recommendation_style["recommendation_class"],
         "RECOMMENDATION_LABEL": recommendation_style["recommendation_label"],

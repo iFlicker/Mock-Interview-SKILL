@@ -12,7 +12,7 @@ SCRIPT_PATH = Path(__file__).with_name("generate_report.py")
 class GenerateReportTest(unittest.TestCase):
     def test_generate_report_renders_distinct_sections_and_escapes_html(self):
         payload = {
-            "schema_version": "mock-interview-report/2.0",
+            "schema_version": "mock-interview-report/3.0",
             "interview_date": "2026-07-06",
             "target_position": "AI/ML Engineer",
             "interview_round": "行为面试/终面",
@@ -28,7 +28,6 @@ class GenerateReportTest(unittest.TestCase):
             "scope_control": "2 个考察项",
             "focus_areas": ["跨团队协作", "冲突处理"],
             "special_sections": "无",
-            "feedback_mode": "纯模拟",
             "question_bank": "未使用",
             "avoided_topics": "无",
             "resume_summary": "<script>alert('x')</script>",
@@ -154,6 +153,7 @@ class GenerateReportTest(unittest.TestCase):
             self.assertIn("已评分权重 60%", report)
             self.assertIn("目标职级", report)
             self.assertIn("招聘经理", report)
+            self.assertNotIn("反馈模式", report)
             self.assertNotIn("下一轮展望", report)
             self.assertIn("风险或不足", report)
             self.assertIn("按时间线说明预警、升级和备选方案。", report)
@@ -189,7 +189,7 @@ class GenerateReportTest(unittest.TestCase):
 
     def test_generate_report_renders_optional_knowledge_corrections(self):
         payload = {
-            "schema_version": "mock-interview-report/2.0",
+            "schema_version": "mock-interview-report/3.0",
             "interview_date": "2026-07-06",
             "target_position": "高级产品经理",
             "interview_round": "经理面",
@@ -198,7 +198,6 @@ class GenerateReportTest(unittest.TestCase):
             "interviewer_style": "直接、关注结果",
             "pressure_value": 65,
             "scope_control": "1 个主题",
-            "feedback_mode": "纯模拟",
             "resume_summary": "负责用户增长产品和新用户激活策略。",
             "topics": [
                 {
@@ -308,7 +307,7 @@ class GenerateReportTest(unittest.TestCase):
 
     def test_generate_report_supports_insufficient_evidence_without_numeric_score(self):
         payload = {
-            "schema_version": "mock-interview-report/2.0",
+            "schema_version": "mock-interview-report/3.0",
             "interview_date": "2026-07-11",
             "target_position": "财务分析师",
             "interview_round": "专业一面",
@@ -317,7 +316,6 @@ class GenerateReportTest(unittest.TestCase):
             "interviewer_style": "严谨",
             "pressure_value": 55,
             "scope_control": "6 个主题",
-            "feedback_mode": "纯模拟",
             "resume_summary": "负责经营分析和预算跟踪。",
             "completion_status": "insufficient_evidence",
             "topics": [],
@@ -382,7 +380,6 @@ class GenerateReportTest(unittest.TestCase):
             "interviewer_style": "严谨",
             "pressure_value": 55,
             "scope_control": "1 个主题",
-            "feedback_mode": "纯模拟",
             "resume_summary": "负责区域门店经营和增长改善。",
             "topics": [
                 {

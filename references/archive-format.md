@@ -31,7 +31,7 @@
 - 删除未发生的可选区块，如非专业面的开场、未进行的收尾问答；
 - 根据总分和推荐结论自动选择颜色等级与 CSS class；
 - 校验并兼容支持的报告 payload `schema_version`；
-- 校验日期、候选人类型、反馈模式、压力值、维度权重、评分覆盖率、分数范围、总分计算和推荐结论约束；
+- 校验日期、候选人类型、压力值、维度权重、评分覆盖率、分数范围、总分计算和推荐结论约束；
 - 对用户原话、题目内容和摘要做 HTML 转义，避免尖括号、代码片段或脚本内容破坏页面结构；
 - 在生成结束前检查是否仍有未替换的占位符。
 
@@ -62,13 +62,13 @@ python3 scripts/generate_report.py \
 
 ## Payload 结构
 
-当前报告 payload 版本为 `mock-interview-report/2.0`。`schema_version` 用于区分报告数据契约，不等同于 `session-state.md` 中的会话状态版本。字段发生不兼容变化时升级主版本；只增加向后兼容字段时升级次版本。生成器继续接受没有 `schema_version` 的旧 payload，并按旧版兼容模式处理；新报告必须显式提供当前版本。
+当前报告 payload 版本为 `mock-interview-report/3.0`。本版本移除 `feedback_mode`、`coaching_note` 和 `evidence_origin`。`schema_version` 用于区分报告数据契约，不等同于 `session-state.md` 中的会话状态版本。字段发生不兼容变化时升级主版本；只增加向后兼容字段时升级次版本。生成器继续接受没有 `schema_version` 的旧 payload 以及 2.0 payload，并忽略已移除字段；新报告必须显式提供当前版本。
 
 ### 顶层必填字段
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `schema_version` | string | 当前必须为 `mock-interview-report/2.0` |
+| `schema_version` | string | 当前必须为 `mock-interview-report/3.0` |
 | `interview_date` | string | 面试日期，格式 `YYYY-MM-DD` |
 | `target_position` | string | 目标职位 |
 | `interview_round` | string | 面试轮次与类型 |
@@ -77,7 +77,6 @@ python3 scripts/generate_report.py \
 | `interviewer_style` | string | 面试官级别与风格 |
 | `pressure_value` | int | 压力值，`1～100` |
 | `scope_control` | string | 范围控制说明 |
-| `feedback_mode` | string | `纯模拟` 或 `教练模式` |
 | `resume_summary` | string | 仅保留与评价有关的简历摘要 |
 | `completion_status` | string | `completed`、`ended_early` 或 `insufficient_evidence` |
 | `total_score` | int or null | 加权总分，`0～100`；没有任何可评分维度时必须为 `null` |
@@ -108,7 +107,6 @@ python3 scripts/generate_report.py \
 | `materials_note` | string | 题库或历史记录说明；无则填 `未使用` |
 | `covered_topics` | string or array | 实际覆盖的主题或考察项；数组会自动拼接 |
 | `score_coverage` | string | 旧版兼容字段；新报告使用 `scored_weight` 和 `score_coverage_note` |
-| `coaching_note` | string | 教练模式下说明提示对后续回答和评分可信度的影响；纯模拟可省略 |
 | `generated_at` | string | 报告生成时间；缺省时脚本自动写入当前时间 |
 | `strengths` | array | 明确优势列表；为空时脚本会写入 `未记录` |
 | `issues` | array | 主要问题与证据；为空时脚本会写入 `未记录` |
@@ -155,7 +153,6 @@ python3 scripts/generate_report.py \
 |---|---|---|
 | `question` | string | 面试官提问 |
 | `answer` | string | 候选人回答 |
-| `evidence_origin` | string | 可选，`independent` 或 `coached`；教练模式下应提供 |
 
 ### 评分维度结构
 
@@ -214,7 +211,7 @@ python3 scripts/generate_report.py \
 
 ```json
 {
-  "schema_version": "mock-interview-report/2.0",
+  "schema_version": "mock-interview-report/3.0",
   "interview_date": "2026-07-06",
   "target_position": "高级产品经理",
   "interview_round": "经理面",
@@ -223,7 +220,6 @@ python3 scripts/generate_report.py \
   "interviewer_style": "直接、关注结果",
   "pressure_value": 65,
   "scope_control": "6 个主题",
-  "feedback_mode": "纯模拟",
   "completion_status": "completed",
   "resume_summary": "最近三年负责用户增长产品和新用户激活策略。",
   "jd_summary": "负责增长机会识别、产品决策和跨部门落地。",
@@ -297,7 +293,6 @@ python3 scripts/generate_report.py \
 ## 注意事项
 
 - 只记录实际提出的问题和用户实际给出的回答。
-- 教练模式下为问答记录 `evidence_origin`，并在 `coaching_note` 中说明提示对评分的影响。
 - 非专业面通常没有开场自我介绍；没有就不要构造 `opening`。
 - 未进行收尾问答时，不要构造 `closing`。
 - 保留不确定性和“证据不足”标记，不得为了显得完整而改写报告内容。
