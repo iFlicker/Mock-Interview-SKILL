@@ -144,6 +144,16 @@ class SkillContractTest(unittest.TestCase):
             with self.subTest(scenario=scenario_id):
                 self.assertIn(f"`{scenario_id}`", scenarios_doc)
 
+    def test_report_prompt_is_concise_but_still_requires_consent(self):
+        skill = SKILL_PATH.read_text(encoding="utf-8")
+        readme = README_PATH.read_text(encoding="utf-8")
+        prompt = "是否为本轮面试生成面试报告？"
+        self.assertIn(prompt, skill)
+        self.assertIn(prompt, readme)
+        self.assertNotIn("默认不生成", skill)
+        self.assertNotIn("默认不生成", readme)
+        self.assertIn("除非用户明确同意，否则不得创建或修改任何面试报告", skill)
+
     def test_skill_routes_runtime_rules_to_single_sources(self):
         skill = SKILL_PATH.read_text(encoding="utf-8")
         for reference in (
@@ -204,10 +214,13 @@ class SkillContractTest(unittest.TestCase):
         self.assertIn("web_connected", skill)
         self.assertIn("scripts/voice_interview.py wait", skill)
         self.assertIn("不得发送最终答复", skill)
-        self.assertIn("functions.wait", skill)
         self.assertIn("already_waiting", skill)
         self.assertIn("message_type: interviewer_question", skill)
-        self.assertIn("外层 25000", skill)
+
+        voice = (ROOT / "references" / "voice-interview.md").read_text(encoding="utf-8")
+        self.assertIn("functions.wait", voice)
+        self.assertIn("外层 25 秒", voice)
+
         self.assertIn("scripts/voice_interview.py open", skill)
         self.assertIn('`display_text` 只使用“面试开始”', skill)
         self.assertIn('`display_text` 只使用“面试结束”', skill)

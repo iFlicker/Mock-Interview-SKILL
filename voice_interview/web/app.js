@@ -1040,11 +1040,11 @@
     stopSpeech();
     stopRecognition(false);
     const disconnectUrl = `/api/session/${sessionId}/disconnect?token=${encodeURIComponent(token)}`;
-    navigator.sendBeacon?.(disconnectUrl, JSON.stringify({
-      schema_version: PROTOCOL_VERSION,
-      message_id: uuid(),
-      client_id: state.clientId,
-    }));
+    const disconnectBody = new Blob(
+      [JSON.stringify({ schema_version: PROTOCOL_VERSION, message_id: uuid(), client_id: state.clientId })],
+      { type: "application/json" }
+    );
+    navigator.sendBeacon?.(disconnectUrl, disconnectBody);
     state.socket?.close();
   });
  

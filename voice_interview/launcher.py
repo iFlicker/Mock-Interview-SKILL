@@ -459,6 +459,13 @@ def terminate_process(pid: int) -> None:
                 check=False,
             )
         else:
-            os.killpg(pid, signal.SIGTERM)
+            try:
+                pgid = os.getpgid(pid)
+            except (ProcessLookupError, PermissionError):
+                return
+            if pgid == pid:
+                os.killpg(pid, signal.SIGTERM)
+            else:
+                os.kill(pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
         pass

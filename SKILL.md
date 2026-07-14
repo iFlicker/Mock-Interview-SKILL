@@ -119,7 +119,7 @@ description: "基于用户真实简历开展沉浸式模拟面试，支持专业
 
 网页只是输入输出通道：每次仍由本 Skill 按 `interview-policy.md` 选择唯一下一问、维护问题历史和证据账本，再用 `send_interviewer_message` 推送；推送成功后必须在同一 Agent 回合内使用 `scripts/voice_interview.py wait` 持续持有等待，脚本内部以 `wait_for_candidate_reply` 的短等待和 cursor 获取用户确认后的回答或控制指令。每个网页会话同一时间只能启动一个 `wait` 进程。短等待超时只是心跳，不得发送最终答复、结束 Agent 回合、重新执行 `wait`、关闭网页会话、停止服务、评分或开始下一题。只有收到回答、控制事件或不可恢复的服务错误才退出本次持续等待；收到回答并推送下一题后立即开始新的持续等待。不得在网页中实现独立题库、追问决策、模型调用或评分。
 
-在 Codex 中，启动或续读等待命令的 `functions.exec` 必须设置外层 `yield_time_ms` 大于内层命令：推荐外层 25000 毫秒、内层 `exec_command` 或 `write_stdin` 20000 毫秒，使内层先返回 shell `session_id`，避免产生悬空外层 cell。如果外层仍返回 `Script running with cell ID ...`，必须立即用顶层 `functions.wait` 续读同一个 `cell_id`，直到拿到内层结果；不得新建另一个 `functions.exec` 包装同一 `write_stdin`。如果底层命令返回可续读的 shell `session_id`，则一次只发起一个 `write_stdin` 并等待它返回，不能并发轮询或重启命令。运行时会对第二个等待进程返回 `already_waiting`；收到它时只能恢复原等待调用，不能继续重试创建等待者。连接网页阶段只用 `get_session_events` 等待 `web_connected`，正式问题成功推送前不得启动回答等待进程。
+在 Codex 中，启动或续读等待命令时必须正确设置 `yield_time_ms` 以避免悬空 cell 和并发冲突，详细参数规格和错误处理规则见 `references/voice-interview.md` 的运行时适配部分。运行时会对第二个等待进程返回 `already_waiting`；收到它时只能恢复原等待调用，不能继续重试创建等待者。连接网页阶段只用 `get_session_events` 等待 `web_connected`，正式问题成功推送前不得启动回答等待进程。
 
 凡是要求候选人继续作答的内容，包括重新表述、澄清、要求展开、追问和纠错确认，都必须以新的唯一 `message_id` 和 `message_type: interviewer_question` 推送，并把同一新 ID 传给下一次 `wait --question-id`。`interviewer_message` 只用于不期待回答的陈述；不得推送一条 `interviewer_message` 后继续等待已经回答过的旧问题 ID。运行时对已回答问题的再次等待会立即返回原回答，Agent 必须消费或忽略该幂等结果并生成新的正式问题，不能继续阻塞。
 
@@ -227,7 +227,7 @@ description: "基于用户真实简历开展沉浸式模拟面试，支持专业
 
 评价完成后，原样询问：
 
-> 是否为本轮面试生成面试报告？默认不生成。
+> 是否为本轮面试生成面试报告？
 
 除非用户明确同意，否则不得创建或修改任何面试报告，也不得声称已经永久记住本轮内容。
 

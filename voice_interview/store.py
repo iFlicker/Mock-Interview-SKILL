@@ -379,12 +379,12 @@ class SessionStore:
         timeout_ms = max(0, min(int(timeout_ms), 25_000))
         deadline = time.monotonic() + timeout_ms / 1000
         with session.condition:
-            while timeout_ms and not any(e["sequence"] > after for e in session.events):
+            while timeout_ms and len(session.events) <= after:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     break
                 session.condition.wait(remaining)
-            events = [copy.deepcopy(e) for e in session.events if e["sequence"] > after]
+            events = [copy.deepcopy(e) for e in session.events[after:]]
             next_cursor = events[-1]["sequence"] if events else after
             return {
                 "session_id": session_id,

@@ -269,7 +269,7 @@ class VoiceBridgeHandler(BaseHTTPRequestHandler):
                 "agent_connected": last_agent_connected,
             })
             while True:
-                events = self.server.store.get_events(session_id, after, 0)
+                events = self.server.store.get_events(session_id, after, 500)
                 for event in events["events"]:
                     self._ws_send_json({"type": "event", "event": event})
                     after = max(after, event["sequence"])
