@@ -6,7 +6,7 @@
 
 ## Schema 版本
 
-- 当前会话状态版本：`mock-interview-session/4.0`。本版本移除反馈模式、教练介入和提示后证据，正式面试统一采用沉浸式模拟；继续保留承接动作、挑战动作、面试官认知来源、独立开场和收尾、跳过替代预算及报告重新授权转换。
+- 当前会话状态版本：`mock-interview-session/4.2`。本版本增加网页语音回答的持续等待所有权、事件 cursor 和 Agent 心跳状态；面试策略、评分蓝图和证据规则保持不变。
 - `schema_version` 必填。字段语义发生不兼容变化时升级主版本；只增加可选字段时升级次版本。
 - 会话状态版本与报告 payload 版本相互独立。报告版本由 `archive-format.md` 定义。
 
@@ -14,9 +14,10 @@
 
 ```json
 {
-  "schema_version": "mock-interview-session/4.0",
+  "schema_version": "mock-interview-session/4.2",
   "phase": "interviewing",
   "config": {},
+  "channel_state": {},
   "score_blueprint": {},
   "topics": [],
   "current_topic_id": null,
@@ -28,6 +29,45 @@
   "completion": null
 }
 ```
+
+## 交互通道状态
+
+`channel_state` 只描述正式面试的输入输出通道，不决定问题、追问、证据或评分。配置完成前不得启动网页服务；环境检查及连接事件不得进入问题历史和证据账本。
+
+```json
+{
+  "interaction_channel": "web_voice",
+  "interaction_channel_confirmed": true,
+  "web_service_status": "running",
+  "agent_connection_status": "connected",
+  "web_session_id": "4ce8f93a7b2d4c22a9d7cc1e1f47a231",
+  "current_question_push": {
+    "message_id": "q-3",
+    "pushed": true
+  },
+  "current_reply_consumption": {
+    "reply_id": "reply-8",
+    "consumed": true
+  },
+  "reply_wait_status": "event_received",
+  "event_cursor": 12,
+  "switched_to_text": false,
+  "start_boundary_emitted": true,
+  "end_boundary_emitted": false
+}
+```
+
+- `interaction_channel` 只能是 `agent_text` 或 `web_voice`；配置尚未确认时可以为 `null`；
+- `interaction_channel_confirmed` 表示用户已经选择或此前明确指定交互方式；为 `false` 时不得开始正式面试；
+- `web_service_status` 只能是 `not_started`、`starting`、`running`、`failed` 或 `closed`。文字面试始终保持 `not_started`；
+- `agent_connection_status` 只能是 `not_connected`、`connecting`、`connected`、`retrying` 或 `failed`。语音面试只有在 `connected` 且收到网页连接事件后才能进入 `interviewing`；
+- `web_session_id` 只保存当前网页会话标识，不在状态中保存 session token；token 只存在于受限运行时文件和网页 URL fragment；
+- `current_question_push` 记录当前正式问题是否已经成功推送。同一 `message_id` 重试时保持同一问题，不追加第二条 `question_history`；
+- `current_reply_consumption` 记录最新网页回答是否已经写入正式状态。只有从 `false` 变为 `true` 的第一次消费可以更新回答状态和证据账本；
+- `reply_wait_status` 只能是 `idle`、`waiting`、`event_received` 或 `failed`。`web_voice` 正式面试中，只要当前问题已推送且尚未消费回答，就必须为 `waiting`；短等待超时不改变该状态；
+- `event_cursor` 保存 Agent 已处理到的最新事件 sequence，只能单调递增。持续等待每次超时、回答或控制事件后都更新它；
+- `switched_to_text` 一旦为 `true` 不再变回 `false`。切换后保留配置、当前问题、问题历史、主题、证据、矛盾和控制历史；
+- `start_boundary_emitted` 和 `end_boundary_emitted` 均为单调布尔值，分别保证正式开始和结束边界只输出一次。刷新、重连、恢复和切换通道不得重置。
 
 ## 交互状态
 
@@ -91,6 +131,8 @@ completed -> report_pending
 ## 配置与评分蓝图
 
 `config` 保存用户确认后的配置快照，至少包含候选人类型、目标职位和职级、面试阶段、面试官角色、面试形式、范围、压力值和语言。
+
+交互方式不属于面试内容配置，不得因选择文字或语音而修改评分蓝图。`config` 可以记录用户明确选择的交互偏好，但运行时唯一状态以 `channel_state` 为准。
 
 `score_blueprint.dimensions` 保存冻结的维度及权重，面试开始后不得修改。中途的压力、重点、题目范围或覆盖数量调整只修改 `config` 和尚未开始的主题，并追加一条 `control_history` 记录旧值、新值和原因。目标职位或面试形式发生到足以使蓝图失效的变化时，不得在原会话中替换蓝图，应结束本轮并以新配置初始化新会话。
 
@@ -209,6 +251,7 @@ completed -> report_pending
 ## 控制指令与完成状态
 
 - 跳过、暂停、继续、压力调整、范围调整和结束面试都追加到 `control_history`。
+- 网页发出的跳过、暂停、继续、结束和切回文字，与当前应用中的同名指令使用相同控制规则；事件 ID 已消费后不得重复追加 `control_history`。
 - 暂停不会清空当前主题；继续时恢复 `current_topic_id`、主问题和原追问次数。
 - 调小范围不删除已有主题和证据；调大范围只增加尚未开始的新主题，且两者都不修改评分蓝图。
 - 主问题在取得证据前被跳过时，将主题标记为 `skipped`，消耗一次 `replacement_budget` 并创建替代主题；替代主题不增加确认的覆盖上限。预算耗尽后提前结束并记录原因。
@@ -228,3 +271,11 @@ completed -> report_pending
 7. 未获授权时不得从会话状态生成或写入报告文件。
 8. 每个正式问题使用的具体事实前提都必须能关联 `knowledge_refs`；`interviewer_inference` 必须经校准表达，`unknown` 不得被输出为既定事实；
 9. 承接动作与挑战动作必须写入问题历史；连续动作计数与历史一致，且任何动作都不能绕过问题质量门或增加第二个主要问题。
+10. `interaction_channel_confirmed` 为 `false` 时不得进入 `interviewing`；`agent_text` 不得启动网页或 MCP 服务，`web_voice` 必须在网页实际连接后才可输出开始边界；
+11. 同一网页问题 `message_id` 最多对应一项问题历史，同一网页回答 `reply_id` 最多消费一次；刷新、重连和重试不得重复追加问题、回答、控制记录或评分证据；
+12. 环境检查、服务连接、浏览器能力、麦克风权限和识别错误都不是正式面试证据；暂停期间或结束后仍不得新增评分证据；
+13. 切回文字面试不改变 `phase`、当前主题、当前问题、追问次数、评分蓝图或证据账本，不重复开始边界；切换后不得再向网页推送正式问题；
+14. 结束边界只输出一次。`end_boundary_emitted` 为 `true` 或网页会话为 `closed` 后不得继续推送问题或接收新回答；关闭网页服务不得删除当前会话的正式证据。
+15. `web_voice` 中当前问题已推送且尚未消费回答时，`reply_wait_status` 必须保持 `waiting`，当前 Agent 回合必须持续持有短轮询；超时或用户沉默不得进入 `evaluating`、关闭网页会话、停止服务或输出最终答复。只有回答、控制事件或不可恢复错误可以解除本次等待。
+16. 每个网页 runtime 同一时间最多有一个回答等待所有者。外层工具 yield 后必须续读原 cell 或 shell session；不得重新启动 `wait`。`already_waiting` 只表示应恢复原等待，不是新事件、失败降级或再次重试的依据。
+17. 每条期待候选人回答的网页消息都必须是具有新 ID 的 `interviewer_question`，并与下一次等待的 `question_id` 一致。重新表述和澄清不得复用已回答问题 ID，也不得用 `interviewer_message` 承载。已回答问题的幂等返回不得再次写入证据，但必须解除错误等待并进入下一问决策。

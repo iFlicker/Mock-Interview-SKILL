@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>语音模拟面试室</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="identity">
+        <div class="avatar" id="interviewer-avatar" aria-hidden="true">面</div>
+        <div>
+          <h1 id="interviewer-name">面试官</h1>
+          <p id="interviewer-role">正在准备面试室</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span id="connection-status" class="connection connecting" role="status">正在连接面试服务</span>
+        <button id="theme-toggle" class="button quiet theme-toggle" type="button" aria-label="切换主题模式">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <button id="pause-button" class="button quiet" type="button">暂停面试</button>
+        <button id="end-button" class="button danger" type="button">结束面试</button>
+      </div>
+    </header>
+
+    <section id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions"></section>
+
+    <section class="composer" aria-label="回答输入区">
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div id="interim" class="interim" aria-live="polite" hidden></div>
+      
+      <div class="visualizer-container" id="visualizer-container">
+        <canvas id="voice-canvas"></canvas>
+      </div>
+
+      <label class="sr-only" for="answer-input">输入回答</label>
+      <textarea id="answer-input" rows="3" placeholder="输入回答... (按 Alt + M 开关麦克风；光标在外时长按空格键说话；Ctrl/⌘ + Enter 发送)" autocomplete="off"></textarea>
+      <div class="composer-row">
+        <div class="input-actions">
+          <label class="rate-label" for="speech-rate">朗读速度</label>
+          <select id="speech-rate" aria-label="面试官朗读速度">
+            <option value="0.8">0.8×</option>
+            <option value="1" selected>1.0×</option>
+            <option value="1.2">1.2×</option>
+            <option value="1.4">1.4×</option>
+          </select>
+        </div>
+        <div class="right-actions">
+          <button id="mic-button" class="button mic" type="button" aria-pressed="false" aria-label="打开麦克风进行语音输入">
+            <span id="mic-label">麦克风已关闭</span>
+            <span class="mic-icon-wrapper" aria-hidden="true">
+              <svg class="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+            </span>
+          </button>
+          <button id="send-button" class="button primary" type="button">发送</button>
+        </div>
+      </div>
+      <div class="secondary-actions">
+        <button id="skip-button" type="button" class="text-button">跳过当前问题</button>
+        <button id="switch-button" type="button" class="text-button">切回当前应用文字面试</button>
+      </div>
+      <p class="privacy-note">提示：长按麦克风或在输入框外长按空格键可“按住说话”，如需要更好的语音输入体验，请安装使用 typeless 或微信输入法。本skill不会录制、保存及上传音频。浏览器语音识别可能由浏览器厂商的在线服务处理。</p>
+    </section>
+  </main>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>

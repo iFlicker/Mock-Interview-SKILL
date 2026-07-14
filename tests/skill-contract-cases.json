@@ -1,5 +1,5 @@
 {
-  "schema_version": "mock-interview-contract/1.0",
+  "schema_version": "mock-interview-contract/1.4",
   "scenarios": [
     {
       "id": "resume_missing",
@@ -225,6 +225,123 @@
       "expected_public": ["围绕经营诊断、资源取舍、业务结果和跨部门协作等岗位相关能力", "使用运营岗位能够自然回答的专业问题"],
       "forbidden_public": ["默认加入编程或算法任务", "询问系统架构或程序员专属知识", "把专业面解释为技术面"],
       "expected_state": ["config.interview_format 为综合专业", "主题来源与目标职位和评分蓝图相关", "special_sections 不自动包含编程或系统设计"]
+    },
+    {
+      "id": "interaction_channel_choice",
+      "covers": ["interaction_channel", "configuration", "state_transition"],
+      "given": "完整本轮配置已经展示，用户此前没有指定交互方式",
+      "when": "Skill 请求用户确认是否调整配置",
+      "expected_public": ["在同一轮提供按当前配置开始文字面试或语音面试的选项", "等待用户明确选择"],
+      "forbidden_public": ["先让用户确认配置再固定追加一次通道确认", "选择前启动服务或提出正式问题"],
+      "expected_state": ["phase 保持 ready", "interaction_channel_confirmed 为 false"]
+    },
+    {
+      "id": "agent_text_no_web",
+      "covers": ["interaction_channel", "voice_deployment"],
+      "given": "本轮配置已确认",
+      "when": "用户选择文字面试",
+      "expected_public": ["继续在当前应用逐轮面试"],
+      "forbidden_public": ["启动网页或本地服务", "打开浏览器", "要求配置 MCP"],
+      "expected_state": ["interaction_channel 为 agent_text", "web_service_status 为 not_started"]
+    },
+    {
+      "id": "web_voice_connection_gate",
+      "covers": ["interaction_channel", "voice_deployment", "state_transition"],
+      "given": "配置已确认且用户选择语音面试",
+      "when": "自动启动本地服务并打开网页",
+      "expected_public": ["先提示面试室已准备好并提供可点击的 localhost URL", "提示后再自动打开网页", "网页实际连接后只输出一次开始边界"],
+      "forbidden_public": ["浏览器已经打开后才提示已尝试打开", "展示端口选择或 MCP 配置", "把自动打开浏览器当作连接成功", "连接前提出正式问题"],
+      "expected_state": ["interaction_channel 为 web_voice", "web_service_status 为 running", "收到 web_connected 后 agent_connection_status 为 connected"]
+    },
+    {
+      "id": "web_voice_boundary_display",
+      "covers": ["interaction_channel", "opening_closing", "voice_idempotency"],
+      "given": "语音面试网页已经连接，正式面试开始或结束",
+      "when": "Skill 输出 Agent App 边界并向网页推送边界状态",
+      "expected_public": ["Agent App 使用长分界线", "网页只显示‘面试开始’或‘面试结束’一次"],
+      "forbidden_public": ["网页显示长横线", "自动朗读开始或结束边界", "状态事件和边界消息各显示一次结束提示"],
+      "expected_state": ["start_boundary_emitted 和 end_boundary_emitted 各最多转换一次", "interview_ended 只转换页面状态"]
+    },
+    {
+      "id": "web_voice_activity_feedback",
+      "covers": ["interaction_channel", "interaction_state", "voice_reconnect"],
+      "given": "网页已经连接但首题尚未到达，或回答已经由服务确认但下一问尚未到达",
+      "when": "网页根据 snapshot 或实时事件更新临时活动状态",
+      "expected_public": ["首题前显示旋转图标和‘已连接，面试官正在准备。...’", "回答气泡显示‘已发送’", "随后显示旋转图标和‘思考中...’"],
+      "forbidden_public": ["显示虚假进度或倒计时", "把临时状态当作正式面试官消息朗读"],
+      "expected_state": ["临时活动状态不写入 timeline、question_history 或 evidence_ledger", "新问题、暂停、断线、结束或切回文字时清除临时状态"]
+    },
+    {
+      "id": "web_voice_first_start_retry",
+      "covers": ["voice_start_retry", "voice_deployment"],
+      "given": "首次启动的本地服务子进程在健康检查完成前瞬时退出",
+      "when": "Skill 自动准备语音面试室",
+      "expected_public": ["在同一次启动请求内自动退避重试并在成功后直接提供面试室"],
+      "forbidden_public": ["第一次瞬时失败就要求用户手动重试", "向普通用户展示启动日志、端口或 token"],
+      "expected_state": ["最多进行 5 次内部启动尝试", "成功后删除临时启动诊断", "仅全部失败后 web_service_status 为 failed"]
+    },
+    {
+      "id": "web_voice_wait_persistence",
+      "covers": ["voice_wait_lifecycle", "interaction_channel", "state_transition"],
+      "given": "网页问题已经成功推送，候选人仍在思考或编辑回答",
+      "when": "wait_for_candidate_reply 连续多次短等待超时",
+      "expected_public": ["同一 Agent 回合继续等待候选人提交或控制事件"],
+      "forbidden_public": ["发送最终答复并让任务进入 idle", "关闭网页会话或停止服务", "评分或提出下一题"],
+      "expected_state": ["phase 保持 interviewing", "reply_wait_status 保持 waiting", "current_question_push 保持不变", "event_cursor 单调递增"]
+    },
+    {
+      "id": "web_voice_single_waiter",
+      "covers": ["voice_single_waiter", "voice_wait_lifecycle", "voice_idempotency"],
+      "given": "正式问题已推送，持续等待工具返回 Script running with cell ID 或 shell session_id",
+      "when": "Agent 需要继续等待网页回答",
+      "expected_public": ["继续读取原等待会话，不新增用户可见消息"],
+      "forbidden_public": ["重新执行 voice_interview.py wait", "为同一网页会话创建第二个等待进程"],
+      "expected_state": ["reply_wait_status 保持 waiting", "同一 runtime 只有一个等待租约", "并发调用返回 already_waiting", "失效租约可以安全回收"]
+    },
+    {
+      "id": "web_voice_rephrase_reply",
+      "covers": ["voice_question_contract", "voice_wait_lifecycle", "voice_idempotency"],
+      "given": "候选人已经回答当前问题，面试官需要重新表述或要求候选人展开",
+      "when": "Agent 向网页推送新的可回答提示并等待回复",
+      "expected_public": ["网页显示新的面试官问题并允许提交新回答"],
+      "forbidden_public": ["使用 interviewer_message 要求回答", "继续等待已回答的旧问题 ID", "永久提示当前问题已经提交"],
+      "expected_state": ["新提示使用唯一 message_id 和 interviewer_question", "wait.question_id 等于新 message_id", "旧回答幂等返回时不重复写入证据"]
+    },
+    {
+      "id": "web_voice_idempotency",
+      "covers": ["voice_idempotency", "evidence", "interaction_state"],
+      "given": "Agent 重试相同 message_id，网页也重复提交同一回答",
+      "when": "桥接服务和 Skill 消费消息",
+      "expected_public": ["只显示一个问题气泡并只自动朗读一次", "只接收一份确认回答"],
+      "forbidden_public": ["重复提问", "重复朗读", "重复写入评分证据"],
+      "expected_state": ["同一 message_id 只对应一条 question_history", "同一 reply_id 的 current_reply_consumption 只转换一次"]
+    },
+    {
+      "id": "web_voice_reconnect",
+      "covers": ["voice_reconnect", "voice_idempotency", "state_transition"],
+      "given": "语音面试已经开始且网页包含历史消息",
+      "when": "网页断开、刷新并重新连接",
+      "expected_public": ["恢复已有聊天消息", "继续当前正式面试"],
+      "forbidden_public": ["重复开始边界", "自动重读历史消息", "重复提交已有回答"],
+      "expected_state": ["web_session_id 保持不变", "事件 sequence 递增且 cursor 恢复", "start_boundary_emitted 保持 true"]
+    },
+    {
+      "id": "web_voice_switch_text",
+      "covers": ["interaction_channel", "voice_fallback", "control", "state_transition"],
+      "given": "网页语音面试正在某个问题中进行",
+      "when": "用户在网页或 Agent App 选择切回文字面试",
+      "expected_public": ["在当前应用继续当前问题或后续面试", "说明已保留正式进度"],
+      "forbidden_public": ["重复输出开始边界", "清空问题历史或证据", "切换后继续向网页推题"],
+      "expected_state": ["interaction_channel 改为 agent_text", "switched_to_text 为 true", "当前主题、问题和证据保持不变"]
+    },
+    {
+      "id": "web_voice_deploy_failure",
+      "covers": ["voice_deployment", "voice_fallback"],
+      "given": "当前 Agent 位于远程环境，或本地服务自动重试后仍无法启动",
+      "when": "准备语音面试室",
+      "expected_public": ["用普通语言说明当前无法使用本地语音面试", "允许立即切回文字面试"],
+      "forbidden_public": ["伪造 Agent 已连接", "要求用户编辑 MCP JSON 或手动选端口"],
+      "expected_state": ["web_service_status 为 failed", "phase 保持 ready", "已确认面试配置保持不变"]
     }
   ]
 }
