@@ -81,13 +81,36 @@ class GenerateReportTest(unittest.TestCase):
                 },
             ],
             "strengths": ["能先对齐目标，再讨论分歧。"],
-            "risks": ["量化结果不足。"],
-            "gaps": ["缺少延期后的复盘指标。"],
-            "improvements": ["补足结果指标。", "强化升级路径的判定条件。", "补充一次失败案例。"],
-            "better_answers": [
+            "issues": [
                 {
-                    "question": "如果对方持续延期呢？",
-                    "approach": "按时间线说明预警、升级和备选方案。",
+                    "type": "风险或不足",
+                    "evidence": "量化结果不足。",
+                    "impact": "可能影响岗位匹配度或下一轮判断。"
+                },
+                {
+                    "type": "矛盾、模糊点或知识缺口",
+                    "evidence": "缺少延期后的复盘指标。",
+                    "impact": "需要在后续追问中继续验证。"
+                }
+            ],
+            "action_items": [
+                {
+                    "priority": "P0",
+                    "target": "如果对方持续延期呢？",
+                    "action": "补足结果指标。",
+                    "better_approach": "按时间线说明预警、升级和备选方案。"
+                },
+                {
+                    "priority": "P1",
+                    "target": "改进项 2",
+                    "action": "强化升级路径的判定条件。",
+                    "better_approach": "按问题背景、个人行动、关键证据和结果复盘组织回答。"
+                },
+                {
+                    "priority": "P2",
+                    "target": "改进项 3",
+                    "action": "补充一次失败案例。",
+                    "better_approach": "按问题背景、个人行动、关键证据和结果复盘组织回答。"
                 }
             ],
             "recommendation": "建议",

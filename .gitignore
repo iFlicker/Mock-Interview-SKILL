@@ -1,0 +1,13 @@
+.DS_Store
+**/.DS_Store
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.wait-owner/
+**/.wait-owner/
+startup-attempt-*.log
+**/startup-attempt-*.log
+mock-interview-voice-*
+**/mock-interview-voice-*

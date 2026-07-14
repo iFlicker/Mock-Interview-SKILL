@@ -495,24 +495,7 @@ def normalize_issues(payload):
             }
         ]
 
-    issues = []
-    for risk in payload.get("risks") or []:
-        issues.append(
-            {
-                "type": "风险或不足",
-                "evidence": risk,
-                "impact": "可能影响岗位匹配度或下一轮判断。",
-            }
-        )
-    for gap in payload.get("gaps") or []:
-        issues.append(
-            {
-                "type": "矛盾、模糊点或知识缺口",
-                "evidence": gap,
-                "impact": "需要在后续追问中继续验证。",
-            }
-        )
-    return issues or [
+    return [
         {
             "type": "无单独记录",
             "evidence": "本轮未记录需要单独列出的主要问题。",
@@ -535,27 +518,7 @@ def normalize_action_items(payload):
             }
         ]
 
-    actions = []
-    better_answers = payload.get("better_answers") or []
-    max_len = max(len(payload.get("improvements") or []), len(better_answers))
-    for index in range(max_len):
-        improvement = (
-            payload.get("improvements", [])[index]
-            if index < len(payload.get("improvements") or [])
-            else "围绕对应问题补充证据并进行针对性练习。"
-        )
-        better_answer = better_answers[index] if index < len(better_answers) else {}
-        actions.append(
-            {
-                "priority": f"P{index}",
-                "target": better_answer.get("question", f"改进项 {index + 1}"),
-                "action": improvement,
-                "better_approach": better_answer.get(
-                    "approach", "按问题背景、个人行动、关键证据和结果复盘组织回答。"
-                ),
-            }
-        )
-    return actions or [
+    return [
         {
             "priority": "P0",
             "target": "本轮主要改进方向",

@@ -42,6 +42,19 @@ REQUIRED_SCENARIOS = {
     "challenge_move_gradient",
     "finite_interviewer_knowledge",
     "non_technical_role_defaults",
+    "interaction_channel_choice",
+    "agent_text_no_web",
+    "web_voice_connection_gate",
+    "web_voice_boundary_display",
+    "web_voice_activity_feedback",
+    "web_voice_first_start_retry",
+    "web_voice_wait_persistence",
+    "web_voice_single_waiter",
+    "web_voice_rephrase_reply",
+    "web_voice_idempotency",
+    "web_voice_reconnect",
+    "web_voice_switch_text",
+    "web_voice_deploy_failure",
 }
 
 REQUIRED_COVERAGE = {
@@ -75,6 +88,15 @@ REQUIRED_COVERAGE = {
     "limited_knowledge",
     "interaction_state",
     "domain_generality",
+    "interaction_channel",
+    "voice_deployment",
+    "voice_start_retry",
+    "voice_wait_lifecycle",
+    "voice_single_waiter",
+    "voice_question_contract",
+    "voice_idempotency",
+    "voice_reconnect",
+    "voice_fallback",
 }
 
 
@@ -85,7 +107,7 @@ class SkillContractTest(unittest.TestCase):
 
     def test_contract_has_required_scenarios_and_coverage(self):
         self.assertEqual(
-            self.contract["schema_version"], "mock-interview-contract/1.0"
+            self.contract["schema_version"], "mock-interview-contract/1.4"
         )
         scenarios = self.contract["scenarios"]
         ids = [scenario["id"] for scenario in scenarios]
@@ -122,6 +144,16 @@ class SkillContractTest(unittest.TestCase):
             with self.subTest(scenario=scenario_id):
                 self.assertIn(f"`{scenario_id}`", scenarios_doc)
 
+    def test_report_prompt_is_concise_but_still_requires_consent(self):
+        skill = SKILL_PATH.read_text(encoding="utf-8")
+        readme = README_PATH.read_text(encoding="utf-8")
+        prompt = "是否为本轮面试生成面试报告？"
+        self.assertIn(prompt, skill)
+        self.assertIn(prompt, readme)
+        self.assertNotIn("默认不生成", skill)
+        self.assertNotIn("默认不生成", readme)
+        self.assertIn("除非用户明确同意，否则不得创建或修改任何面试报告", skill)
+
     def test_skill_routes_runtime_rules_to_single_sources(self):
         skill = SKILL_PATH.read_text(encoding="utf-8")
         for reference in (
@@ -143,7 +175,7 @@ class SkillContractTest(unittest.TestCase):
         self.assertIn("## 矛盾分级", policy)
 
         state = STATE_PATH.read_text(encoding="utf-8")
-        self.assertIn('"schema_version": "mock-interview-session/4.0"', state)
+        self.assertIn('"schema_version": "mock-interview-session/4.2"', state)
         self.assertIn('"main_question_id": "q-1"', state)
         self.assertIn('"follow_up_count": 2', state)
         self.assertIn('"depth_profile": "standard"', state)
@@ -155,6 +187,43 @@ class SkillContractTest(unittest.TestCase):
         self.assertIn('"bridge_move": "focus"', state)
         self.assertIn('"challenge_move": "test_evidence"', state)
         self.assertIn('"source": "candidate_statement"', state)
+        self.assertIn('"interaction_channel": "web_voice"', state)
+        self.assertIn('"current_question_push"', state)
+        self.assertIn('"current_reply_consumption"', state)
+        self.assertIn('"reply_wait_status"', state)
+        self.assertIn('"event_cursor"', state)
+
+        voice = (ROOT / "references" / "voice-interview.md").read_text(encoding="utf-8")
+        for tool in (
+            "create_interview_session",
+            "send_interviewer_message",
+            "wait_for_candidate_reply",
+            "get_session_events",
+            "close_interview_session",
+        ):
+            self.assertIn(tool, voice)
+
+    def test_text_and_voice_channel_boundaries_are_explicit(self):
+        skill = SKILL_PATH.read_text(encoding="utf-8")
+        self.assertIn("## 选择交互方式", skill)
+        self.assertIn("按当前配置开始文字面试", skill)
+        self.assertIn("按当前配置开始语音面试", skill)
+        self.assertIn("不得先让用户确认配置、再固定追加一次交互方式确认", skill)
+        self.assertIn("interaction_channel", skill)
+        self.assertIn("选择文字面试时不得读取或启动语音运行时", skill)
+        self.assertIn("web_connected", skill)
+        self.assertIn("scripts/voice_interview.py wait", skill)
+        self.assertIn("不得发送最终答复", skill)
+        self.assertIn("already_waiting", skill)
+        self.assertIn("message_type: interviewer_question", skill)
+
+        voice = (ROOT / "references" / "voice-interview.md").read_text(encoding="utf-8")
+        self.assertIn("functions.wait", voice)
+        self.assertIn("外层 25 秒", voice)
+
+        self.assertIn("scripts/voice_interview.py open", skill)
+        self.assertIn('`display_text` 只使用“面试开始”', skill)
+        self.assertIn('`display_text` 只使用“面试结束”', skill)
 
     def test_generic_examples_are_not_anchored_to_programmer_interviews(self):
         generic_docs = "\n".join(
